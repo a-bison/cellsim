@@ -83,4 +83,23 @@ SDL_FRect WorldWindow::makeBorderRect(size_t worldWidth, size_t worldHeight) {
 		cellSize*worldHeight
 	};
 }
+
+void WorldWindow::zoom(float x, float y, float amount) {
+	// Position we're zooming in/out at, in life world coordinates.
+	float gridx = (x - xoffset) / cellSize;
+	float gridy = (y - yoffset) / cellSize;
+
+	float newCellSize = cellSize + cellSize*amount*zoomSpeed;
+	if (newCellSize < minCellSize) newCellSize = minCellSize;
+
+	float newGridX = (x - xoffset) / newCellSize;
+	float newGridY = (y - yoffset) / newCellSize;
+
+	float errorx = gridx - newGridX;
+	float errory = gridy - newGridY;
+
+	xoffset -= errorx*newCellSize;
+	yoffset -= errory*newCellSize;
+	cellSize = newCellSize;
+}
 }

@@ -12,9 +12,13 @@ void renderGrid(SDL_Renderer* renderer, float xoffset, float yoffset, float cell
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h);
 
 struct WorldWindow {
-	float cellSize = 1.0f;
+	static constexpr float minCellSize = 1.0f;
+
+	float zoomSpeed = 0.1f;
+	float cellSize = minCellSize;
 	float xoffset = 0.0f;
 	float yoffset = 0.0f;
+	float gridFadeStart = 10.0f;
 
 	SDL_FPoint sdlPointFromLifePoint(size_t x, size_t y);
 	SDL_FPoint sdlPointFromLifePoint(const life::Point& pt);
@@ -26,6 +30,10 @@ struct WorldWindow {
 	void updateCellRectPos(SDL_FRect& rect, int x, int y);
 
 	SDL_FRect makeBorderRect(size_t worldWidth, size_t worldHeight);
+
+	// Zooms the window. Negative `amount` zooms out, positive zooms in.
+	// x, y are the screen coordinates the zoom was performed at.
+	void zoom(float x, float y, float amount);
 
 	template<size_t W, size_t H>
 	void renderWorld(SDL_Renderer* renderer, const life::World<W, H>& world);

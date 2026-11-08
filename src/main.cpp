@@ -46,7 +46,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	bool windowCreateSuccess = SDL_CreateWindowAndRenderer(
 		"cellsim",
 		WINDOW_WIDTH, WINDOW_HEIGHT,
-		0, // No flags
+		SDL_WINDOW_RESIZABLE,
 		&__state.window,
 		&__state.renderer
 	);
@@ -89,6 +89,10 @@ SDL_AppResult handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
 	return SDL_APP_CONTINUE;
 }
 
+void handleMouseWheel(AppState& state, SDL_MouseWheelEvent& event) {
+	state.worldWindow.zoom(event.mouse_x, event.mouse_y, event.y);
+}
+
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
 	auto& state = *reinterpret_cast<AppState*>(appstate);
 
@@ -97,9 +101,14 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
 		return SDL_APP_SUCCESS;
 	case SDL_EVENT_KEY_DOWN:
 		return handleKeyDown(state, event->key);
+	case SDL_EVENT_MOUSE_WHEEL:
+		handleMouseWheel(state, event->wheel);
+		break;
 	default:
-		return SDL_APP_CONTINUE;
+		break;
 	}
+
+	return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {

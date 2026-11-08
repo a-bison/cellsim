@@ -15,8 +15,17 @@ void WorldWindow::renderWorld(SDL_Renderer* renderer, const life::World<W, H>& w
 	}
 
 	// Draw grid
-	SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
+	float gridAlpha = 255.0f;
+	if (cellSize <= gridFadeStart) {
+		gridAlpha *= (cellSize - minCellSize) / (gridFadeStart - minCellSize);
+	}
+	uint8_t gridAlpha_int = static_cast<uint8_t>(gridAlpha);
+	SDL_BlendMode oldMode;
+	SDL_GetRenderDrawBlendMode(renderer, &oldMode);
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawColor(renderer, 50, 50, 50, gridAlpha_int);
 	renderGrid(renderer, xoffset, yoffset, cellSize);
+	SDL_SetRenderDrawBlendMode(renderer, oldMode);
 
 	// Draw border
 	SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
