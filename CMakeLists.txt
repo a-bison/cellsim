@@ -13,6 +13,11 @@ target_link_options(compiler-options INTERFACE -static -static-libgcc -static-li
 add_executable(main "src/main.cpp")
 set_target_properties(main PROPERTIES OUTPUT_NAME "cellsim")
 
+target_sources(main PRIVATE "src/life.cpp")
+target_sources(main PRIVATE "src/display.cpp")
+
+target_include_directories(main PRIVATE "src")
+
 add_subdirectory(lib/SDL)
 
 target_link_libraries(main PRIVATE compiler-options SDL3::SDL3)
