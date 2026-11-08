@@ -21,7 +21,7 @@ const life::Point GLIDER[] {
 	{ 2, 2 }
 };
 
-struct SimState {
+struct LifeState {
 	unsigned int tickms = 100;
 	uint64_t lastTickTime = 0;
 	bool paused;
@@ -32,7 +32,7 @@ struct AppState {
 	SDL_Renderer* renderer;
 
 	life::World<WORLD_WIDTH, WORLD_HEIGHT> world;
-	SimState simState;
+	LifeState lifeState;
 };
 
 static AppState __state;
@@ -67,10 +67,10 @@ SDL_AppResult handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
 	case SDLK_ESCAPE:
 		return SDL_APP_SUCCESS;
 	case SDLK_SPACE:
-		state.simState.paused = !state.simState.paused;
+		state.lifeState.paused = !state.lifeState.paused;
 		break;
 	case SDLK_E:
-		if (state.simState.paused) {
+		if (state.lifeState.paused) {
 			state.world.tick();
 			state.world.swap();
 		}
@@ -104,12 +104,12 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 	auto* renderer = state.renderer;
 
 	uint64_t currentTime = SDL_GetTicks();
-	uint64_t deltaTime = currentTime - state.simState.lastTickTime;
+	uint64_t deltaTime = currentTime - state.lifeState.lastTickTime;
 
-	if (deltaTime > state.simState.tickms && !state.simState.paused) {
+	if (deltaTime > state.lifeState.tickms && !state.lifeState.paused) {
 		state.world.tick();
 		state.world.swap();
-		state.simState.lastTickTime = currentTime;
+		state.lifeState.lastTickTime = currentTime;
 	}
 
 	int w = 0;
