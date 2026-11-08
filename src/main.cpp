@@ -115,6 +115,14 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 		state.lifeState.lastTickTime = currentTime;
 	}
 
+	float mouseX;
+	float mouseY;
+	auto mouseButtons = SDL_GetRelativeMouseState(&mouseX, &mouseY);
+	if (mouseButtons & SDL_BUTTON_MMASK) {
+		state.worldWindow.xoffset += mouseX;
+		state.worldWindow.yoffset += mouseY;
+	}
+
 	int w = 0;
 	int h = 0;
 	SDL_GetCurrentRenderOutputSize(renderer, &w, &h);

@@ -11,7 +11,7 @@ void renderHorizonalLine(SDL_Renderer* renderer, float y, float w) {
 	SDL_RenderLine(renderer, 0.0f, y, w, y);
 }
 
-void renderGrid(SDL_Renderer* renderer, float offset, float cellSize) {
+void renderGrid(SDL_Renderer* renderer, float xoffset, float yoffset, float cellSize) {
 	int w_i = 0;
 	int h_i = 0;
 
@@ -20,16 +20,17 @@ void renderGrid(SDL_Renderer* renderer, float offset, float cellSize) {
 	float w = static_cast<float>(w_i);
 	float h = static_cast<float>(h_i);
 
-	offset = std::fmod(offset, cellSize);
+	xoffset = std::fmod(xoffset, cellSize);
+	yoffset = std::fmod(yoffset, cellSize);
 
-	float x = offset;
-	while (x < w) {
+	float x = xoffset;
+	while (x <= w) {
 		renderVerticalLine(renderer, x, h);
 		x += cellSize;
 	}
 
-	float y = offset;
-	while (y < h) {
+	float y = yoffset;
+	while (y <= h) {
 		renderHorizonalLine(renderer, y, w);
 		y += cellSize;
 	}
@@ -72,5 +73,14 @@ void WorldWindow::updateCellRectPos(SDL_FRect& rect, int x, int y) {
 	auto pt = sdlPointFromLifePoint(x, y);
 	rect.x = pt.x;
 	rect.y = pt.y;
+}
+
+SDL_FRect WorldWindow::makeBorderRect(size_t worldWidth, size_t worldHeight) {
+	return {
+		xoffset,
+		yoffset,
+		cellSize*worldWidth,
+		cellSize*worldHeight
+	};
 }
 }

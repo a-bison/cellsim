@@ -7,7 +7,7 @@
 namespace display {
 void renderVerticalLine(SDL_Renderer* renderer, float x, float h);
 void renderHorizonalLine(SDL_Renderer* renderer, float y, float w);
-void renderGrid(SDL_Renderer* renderer, float offset, float cellSize);
+void renderGrid(SDL_Renderer* renderer, float xoffset, float yoffset, float cellSize);
 
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h);
 
@@ -24,6 +24,8 @@ struct WorldWindow {
 
 	void initCellRect(SDL_FRect& rect);
 	void updateCellRectPos(SDL_FRect& rect, int x, int y);
+
+	SDL_FRect makeBorderRect(size_t worldWidth, size_t worldHeight);
 
 	template<size_t W, size_t H>
 	void renderWorld(SDL_Renderer* renderer, const life::World<W, H>& world);
