@@ -32,6 +32,7 @@ struct AppState {
 	SDL_Renderer* renderer;
 
 	life::World<WORLD_WIDTH, WORLD_HEIGHT> world;
+	display::WorldWindow worldWindow;
 	LifeState lifeState;
 };
 
@@ -53,6 +54,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 		SDL_Log("Couldn't create window and renderer: %s", SDL_GetError());
 		return SDL_APP_FAILURE;
 	}
+
+	__state.worldWindow.cellSize = CELLSIZE;
 
 	SDL_SetRenderVSync(__state.renderer, 1);
 
@@ -119,20 +122,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_RenderClear(renderer);
 
-	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-	SDL_FRect cellRect;
-	display::initCellRect(cellRect, CELLSIZE);
-	for (int y = 0; y < WORLD_HEIGHT; y++) {
-		for (int x = 0; x < WORLD_WIDTH; x++) {
-			if (!state.world.frontBuffer().get(x, y)) continue;
-
-			display::fillCellRect(cellRect, 0.0f, CELLSIZE, x, y);
-			SDL_RenderFillRect(renderer, &cellRect);
-		}
-	}
-
-	SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
-	display::renderGrid(renderer, 0.0f, CELLSIZE);
+	state.worldWindow.renderWorld(renderer, state.world);
 
 	SDL_RenderPresent(renderer);
 

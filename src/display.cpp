@@ -35,18 +35,6 @@ void renderGrid(SDL_Renderer* renderer, float offset, float cellSize) {
 	}
 }
 
-void initCellRect(SDL_FRect& rect, float cellSize) {
-	rect.x = 0.0f;
-	rect.y = 0.0f;
-	rect.w = cellSize;
-	rect.h = cellSize;
-}
-
-void fillCellRect(SDL_FRect& rect, float offset, float cellSize, int x, int y) {
-	rect.x = offset+cellSize*x;
-	rect.y = offset+cellSize*y;
-}
-
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {
 	if (rect.x > w || rect.y > h) return false;
 	if (rect.x + rect.w < 0 || rect.y + rect.h < 0) return false;
@@ -54,4 +42,35 @@ bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {
 	return true;
 }
 
+SDL_FPoint WorldWindow::sdlPointFromLifePoint(size_t x, size_t y) {
+	return { xoffset + x*cellSize, yoffset + y*cellSize };
+}
+
+SDL_FPoint WorldWindow::sdlPointFromLifePoint(const life::Point& pt) {
+	return sdlPointFromLifePoint(pt.x, pt.y);
+}
+
+life::Point WorldWindow::lifePointFromSdlPoint(float x, float y) {
+	return { 
+		static_cast<size_t>(std::floor((x-xoffset)/cellSize)),
+		static_cast<size_t>(std::floor((y-yoffset)/cellSize))
+	};
+}
+
+life::Point WorldWindow::lifePointFromSdlPoint(const SDL_FPoint& pt) {
+	return lifePointFromSdlPoint(pt.x, pt.y);
+}
+
+void WorldWindow::initCellRect(SDL_FRect& rect) {
+	rect.x = 0.0f;
+	rect.y = 0.0f;
+	rect.w = cellSize;
+	rect.h = cellSize;
+}
+
+void WorldWindow::updateCellRectPos(SDL_FRect& rect, int x, int y) {
+	auto pt = sdlPointFromLifePoint(x, y);
+	rect.x = pt.x;
+	rect.y = pt.y;
+}
 }
