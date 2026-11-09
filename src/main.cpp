@@ -24,12 +24,18 @@ const life::Point GLIDER[] {
 struct LifeState {
 	unsigned int tickms = 100;
 	uint64_t lastTickTime = 0;
+	float averageTickTime = 0.0f;
 	bool paused;
 };
 
 struct AppState {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
+
+	float textScale = 2.0f;
+	float textPadding = 2.0f;
+	uint64_t lastTime = 0;
+	float averageFrameTime = 0.0f;
 
 	life::World<WORLD_WIDTH, WORLD_HEIGHT> world;
 	display::WorldWindow worldWindow;
@@ -111,18 +117,70 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
 	return SDL_APP_CONTINUE;
 }
 
+float rollingAverage(float currentAverage, float newValue) {
+	return 0.95*currentAverage + 0.05*newValue;
+}
+
+template<size_t W, size_t H>
+void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t currentTime) {
+	uint64_t deltaTime = currentTime - lifeState.lastTickTime;
+
+	if (deltaTime > lifeState.tickms && !lifeState.paused) {
+		world.tick();
+		world.swap();
+		lifeState.lastTickTime = currentTime;
+		lifeState.averageTickTime = rollingAverage(lifeState.averageTickTime, deltaTime);
+	}
+}
+
+void renderUi(AppState& state) {
+	auto* renderer = state.renderer;
+
+	float oldScaleX;
+	float oldScaleY;
+
+	SDL_GetRenderScale(renderer, &oldScaleX, &oldScaleY);
+	SDL_SetRenderScale(renderer, state.textScale, state.textScale);
+
+	float lineHeight = display::calcTextSize("H").y;
+	float ycursor = state.textPadding;
+
+	// FPS counter
+	display::renderTextFormat(
+		renderer,
+		state.textPadding,
+		ycursor,
+		"{:.2f} FPS ({:.2f} ms)",
+		1000.0f / state.averageFrameTime,
+		state.averageFrameTime
+	);
+
+	ycursor += state.textPadding + lineHeight;
+
+	// TPS counter
+	display::renderTextFormat(
+		renderer,
+		state.textPadding,
+		ycursor,
+		"{:.2f} TPS ({:.2f}/{} ms)",
+		1000.0f / state.lifeState.averageTickTime,
+		state.lifeState.averageTickTime,
+		state.lifeState.tickms
+	);
+
+	SDL_SetRenderScale(renderer, oldScaleX, oldScaleY);
+}
+
 SDL_AppResult SDL_AppIterate(void* appstate) {
 	auto& state = *reinterpret_cast<AppState*>(appstate);
 	auto* renderer = state.renderer;
 
 	uint64_t currentTime = SDL_GetTicks();
-	uint64_t deltaTime = currentTime - state.lifeState.lastTickTime;
+	uint64_t frameDelta = currentTime - state.lastTime;
+	state.lastTime = currentTime;
+	state.averageFrameTime = rollingAverage(state.averageFrameTime, frameDelta);
 
-	if (deltaTime > state.lifeState.tickms && !state.lifeState.paused) {
-		state.world.tick();
-		state.world.swap();
-		state.lifeState.lastTickTime = currentTime;
-	}
+	processLifeTick(state.world, state.lifeState, currentTime);
 
 	float mouseX;
 	float mouseY;
@@ -140,6 +198,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 	SDL_RenderClear(renderer);
 
 	state.worldWindow.renderWorld(renderer, state.world);
+
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	renderUi(state);
 
 	SDL_RenderPresent(renderer);
 

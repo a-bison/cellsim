@@ -9,6 +9,22 @@ void renderVerticalLine(SDL_Renderer* renderer, float x, float h);
 void renderHorizonalLine(SDL_Renderer* renderer, float y, float w);
 void renderGridLines(SDL_Renderer* renderer, float xoffset, float yoffset, float cellSize);
 
+// Will eventually replace this with better text rendering, just abstracting
+// the debug text for now.
+void renderText(SDL_Renderer* renderer, float x, float y, const std::string& str);
+
+template<typename... Args>
+void renderTextFormat(
+	SDL_Renderer* renderer,
+	float x,
+	float y,
+	std::format_string<Args...> fmt,
+	Args&&... args
+);
+
+// Returns width in x, height in y.
+SDL_FPoint calcTextSize(const std::string& str);
+
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h);
 
 struct WorldWindow {

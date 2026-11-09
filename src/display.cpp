@@ -36,6 +36,17 @@ void renderGridLines(SDL_Renderer* renderer, float xoffset, float yoffset, float
 	}
 }
 
+void renderText(SDL_Renderer* renderer, float x, float y, const std::string& str) {
+	SDL_RenderDebugText(renderer, x, y, str.c_str());
+}
+
+SDL_FPoint calcTextSize(const std::string& str) {
+	return {
+		static_cast<float>(str.size() * SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE),
+		static_cast<float>(SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE)
+	};
+}
+
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {
 	if (rect.x > w || rect.y > h) return false;
 	if (rect.x + rect.w < 0 || rect.y + rect.h < 0) return false;
