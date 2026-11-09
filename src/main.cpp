@@ -9,7 +9,7 @@
 
 static constexpr size_t WINDOW_WIDTH = 800;
 static constexpr size_t WINDOW_HEIGHT = WINDOW_WIDTH;
-static constexpr size_t WORLD_WIDTH = 100;
+static constexpr size_t WORLD_WIDTH = 400;
 static constexpr size_t WORLD_HEIGHT = WORLD_WIDTH;
 static constexpr float CELLSIZE = WINDOW_WIDTH / WORLD_WIDTH;
 
@@ -55,7 +55,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 		return SDL_APP_FAILURE;
 	}
 
-	__state.worldWindow.cellSize = CELLSIZE;
+	__state.worldWindow.setCellSize(CELLSIZE);
 
 	SDL_SetRenderVSync(__state.renderer, 1);
 

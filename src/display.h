@@ -20,6 +20,8 @@ struct WorldWindow {
 	float yoffset = 0.0f;
 	float gridFadeStart = 10.0f;
 
+	void setCellSize(float newCellSize);
+
 	SDL_FPoint sdlPointFromLifePoint(size_t x, size_t y);
 	SDL_FPoint sdlPointFromLifePoint(const life::Point& pt);
 

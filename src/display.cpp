@@ -43,6 +43,10 @@ bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {
 	return true;
 }
 
+void WorldWindow::setCellSize(float newCellSize) {
+	cellSize = (newCellSize > minCellSize) ? newCellSize : minCellSize;
+}
+
 SDL_FPoint WorldWindow::sdlPointFromLifePoint(size_t x, size_t y) {
 	return { xoffset + x*cellSize, yoffset + y*cellSize };
 }
@@ -122,7 +126,7 @@ void WorldWindow::renderGrid(SDL_Renderer* renderer) {
 
 void WorldWindow::renderBorder(SDL_Renderer* renderer, size_t worldWidth, size_t worldHeight) {
 	SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
-	auto borderRect = makeBorderRect(W, H);
+	auto borderRect = makeBorderRect(worldWidth, worldHeight);
 	SDL_RenderRect(renderer, &borderRect);
 }
 }
