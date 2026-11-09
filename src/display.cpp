@@ -11,7 +11,7 @@ void renderHorizonalLine(SDL_Renderer* renderer, float y, float w) {
 	SDL_RenderLine(renderer, 0.0f, y, w, y);
 }
 
-void renderGrid(SDL_Renderer* renderer, float xoffset, float yoffset, float cellSize) {
+void renderGridLines(SDL_Renderer* renderer, float xoffset, float yoffset, float cellSize) {
 	int w_i = 0;
 	int h_i = 0;
 
@@ -101,5 +101,28 @@ void WorldWindow::zoom(float x, float y, float amount) {
 	xoffset -= errorx*newCellSize;
 	yoffset -= errory*newCellSize;
 	cellSize = newCellSize;
+}
+
+void WorldWindow::renderGrid(SDL_Renderer* renderer) {
+	float gridAlpha = 255.0f;
+	if (cellSize <= gridFadeStart) {
+		gridAlpha *= (cellSize - minCellSize) / (gridFadeStart - minCellSize);
+	}
+	SDL_BlendMode oldMode;
+	SDL_GetRenderDrawBlendMode(renderer, &oldMode);
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawColor(
+		renderer,
+		50, 50, 50,
+		static_cast<uint8_t>(gridAlpha)
+	);
+	renderGridLines(renderer, xoffset, yoffset, cellSize);
+	SDL_SetRenderDrawBlendMode(renderer, oldMode);
+}
+
+void WorldWindow::renderBorder(SDL_Renderer* renderer, size_t worldWidth, size_t worldHeight) {
+	SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
+	auto borderRect = makeBorderRect(W, H);
+	SDL_RenderRect(renderer, &borderRect);
 }
 }
