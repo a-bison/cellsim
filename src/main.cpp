@@ -190,10 +190,6 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 		state.worldWindow.yoffset += mouseY;
 	}
 
-	int w = 0;
-	int h = 0;
-	SDL_GetCurrentRenderOutputSize(renderer, &w, &h);
-
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_RenderClear(renderer);
 
