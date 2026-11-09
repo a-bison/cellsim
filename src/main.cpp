@@ -25,7 +25,7 @@ struct LifeState {
 	unsigned int tickms = 100;
 	uint64_t lastTickTime = 0;
 	float averageTickTime = 0.0f;
-	bool paused;
+	bool paused = false;
 };
 
 struct AppState {
