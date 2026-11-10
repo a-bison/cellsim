@@ -174,7 +174,8 @@ void renderUi(AppState& state) {
 	SDL_GetMouseState(&mouseX, &mouseY);
 
 	auto pt = state.worldWindow.lifePointFromScreenPoint(mouseX, mouseY);
-	std::string pos = std::format("({},{})", pt.x, pt.y);
+	auto pt_int = display::sPointFromFPoint(pt);
+	std::string pos = std::format("({},{})", pt_int.x, pt_int.y);
 
 	int w;
 	int h;

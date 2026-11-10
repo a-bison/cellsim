@@ -56,8 +56,8 @@ bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {
 
 life::SPoint sPointFromFPoint(const SDL_FPoint& pt) {
 	return {
-		static_cast<life::signed_size_t>(pt.x),
-		static_cast<life::signed_size_t>(pt.y)
+		static_cast<life::signed_size_t>(std::floor(pt.x)),
+		static_cast<life::signed_size_t>(std::floor(pt.y))
 	};
 }
 
@@ -71,8 +71,8 @@ SDL_FPoint WorldWindow::screenPointFromLifePoint(size_t x, size_t y) {
 
 SDL_FPoint WorldWindow::lifePointFromScreenPoint(float x, float y) {
 	return { 
-		std::floor((x-xoffset)/cellSize),
-		std::floor((y-yoffset)/cellSize)
+		(x-xoffset)/cellSize,
+		(y-yoffset)/cellSize
 	};
 }
 
