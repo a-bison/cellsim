@@ -4,7 +4,7 @@
 
 #include "life.h"
 
-namespace display {
+namespace ui {
 void renderVerticalLine(SDL_Renderer* renderer, float x, float h);
 void renderHorizonalLine(SDL_Renderer* renderer, float y, float w);
 void renderGridLines(SDL_Renderer* renderer, float xoffset, float yoffset, float cellSize);
@@ -64,4 +64,4 @@ struct WorldWindow {
 };
 }
 
-#include "display.inl"
+#include "ui.inl"

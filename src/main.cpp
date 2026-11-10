@@ -4,7 +4,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-#include "display.h"
+#include "ui.h"
 #include "life.h"
 
 static constexpr size_t WINDOW_WIDTH = 800;
@@ -38,7 +38,7 @@ struct AppState {
 	float averageFrameTime = 0.0f;
 
 	life::World<WORLD_WIDTH, WORLD_HEIGHT> world;
-	display::WorldWindow worldWindow;
+	ui::WorldWindow worldWindow;
 	LifeState lifeState;
 };
 
@@ -142,12 +142,12 @@ void renderUi(AppState& state) {
 	SDL_GetRenderScale(renderer, &oldScaleX, &oldScaleY);
 	SDL_SetRenderScale(renderer, state.textScale, state.textScale);
 
-	float lineHeight = display::calcTextSize("H").y;
+	float lineHeight = ui::calcTextSize("H").y;
 	float xcursor = state.textPadding;
 	float ycursor = state.textPadding;
 
 	// FPS counter
-	display::renderTextFormat(
+	ui::renderTextFormat(
 		renderer,
 		xcursor,
 		ycursor,
@@ -159,7 +159,7 @@ void renderUi(AppState& state) {
 	ycursor += state.textPadding + lineHeight;
 
 	// TPS counter
-	display::renderTextFormat(
+	ui::renderTextFormat(
 		renderer,
 		xcursor,
 		ycursor,
@@ -174,19 +174,19 @@ void renderUi(AppState& state) {
 	SDL_GetMouseState(&mouseX, &mouseY);
 
 	auto pt = state.worldWindow.lifePointFromScreenPoint(mouseX, mouseY);
-	auto pt_int = display::sPointFromFPoint(pt);
+	auto pt_int = ui::sPointFromFPoint(pt);
 	std::string pos = std::format("({},{})", pt_int.x, pt_int.y);
 
 	int w;
 	int h;
 	SDL_GetRenderOutputSize(renderer, &w, &h);
 
-	auto [textWidth, textHeight] = display::calcTextSize(pos);
+	auto [textWidth, textHeight] = ui::calcTextSize(pos);
 
 	xcursor = (w - textWidth*state.textScale - state.textPadding) / state.textScale;
 	ycursor = (h - textHeight*state.textScale - state.textPadding) / state.textScale;
 
-	display::renderText(renderer, xcursor, ycursor, pos);
+	ui::renderText(renderer, xcursor, ycursor, pos);
 
 	SDL_SetRenderScale(renderer, oldScaleX, oldScaleY);
 }

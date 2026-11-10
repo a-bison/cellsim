@@ -1,8 +1,8 @@
-#include "display.h"
+#include "ui.h"
 
 #include <cmath>
 
-namespace display {
+namespace ui {
 void renderVerticalLine(SDL_Renderer* renderer, float x, float h) {
 	SDL_RenderLine(renderer, x, 0.0f, x, h);
 }

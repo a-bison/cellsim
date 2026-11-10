@@ -1,4 +1,4 @@
-namespace display {
+namespace ui {
 template<typename... Args>
 void renderTextFormat(
 	SDL_Renderer* renderer,
