@@ -11,6 +11,11 @@ struct Point {
 	size_t y;
 };
 
+struct SPoint {
+	signed_size_t x;
+	signed_size_t y;
+};
+
 template<size_t W, size_t H>
 struct Buffer {
 	std::array<bool, W*H> __data;

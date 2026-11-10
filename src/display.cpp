@@ -54,27 +54,26 @@ bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {
 	return true;
 }
 
+life::SPoint sPointFromFPoint(const SDL_FPoint& pt) {
+	return {
+		static_cast<life::signed_size_t>(pt.x),
+		static_cast<life::signed_size_t>(pt.y)
+	};
+}
+
 void WorldWindow::setCellSize(float newCellSize) {
 	cellSize = (newCellSize > minCellSize) ? newCellSize : minCellSize;
 }
 
-SDL_FPoint WorldWindow::sdlPointFromLifePoint(size_t x, size_t y) {
+SDL_FPoint WorldWindow::screenPointFromLifePoint(size_t x, size_t y) {
 	return { xoffset + x*cellSize, yoffset + y*cellSize };
 }
 
-SDL_FPoint WorldWindow::sdlPointFromLifePoint(const life::Point& pt) {
-	return sdlPointFromLifePoint(pt.x, pt.y);
-}
-
-life::Point WorldWindow::lifePointFromSdlPoint(float x, float y) {
+SDL_FPoint WorldWindow::lifePointFromScreenPoint(float x, float y) {
 	return { 
-		static_cast<size_t>(std::floor((x-xoffset)/cellSize)),
-		static_cast<size_t>(std::floor((y-yoffset)/cellSize))
+		std::floor((x-xoffset)/cellSize),
+		std::floor((y-yoffset)/cellSize)
 	};
-}
-
-life::Point WorldWindow::lifePointFromSdlPoint(const SDL_FPoint& pt) {
-	return lifePointFromSdlPoint(pt.x, pt.y);
 }
 
 void WorldWindow::initCellRect(SDL_FRect& rect) {
@@ -85,7 +84,7 @@ void WorldWindow::initCellRect(SDL_FRect& rect) {
 }
 
 void WorldWindow::updateCellRectPos(SDL_FRect& rect, int x, int y) {
-	auto pt = sdlPointFromLifePoint(x, y);
+	auto pt = screenPointFromLifePoint(x, y);
 	rect.x = pt.x;
 	rect.y = pt.y;
 }
@@ -101,21 +100,19 @@ SDL_FRect WorldWindow::makeBorderRect(size_t worldWidth, size_t worldHeight) {
 
 void WorldWindow::zoom(float x, float y, float amount) {
 	// Position we're zooming in/out at, in life world coordinates.
-	float gridx = (x - xoffset) / cellSize;
-	float gridy = (y - yoffset) / cellSize;
+	auto [gridx, gridy] = lifePointFromScreenPoint(x, y);
 
 	float newCellSize = cellSize + cellSize*amount*zoomSpeed;
 	if (newCellSize < minCellSize) newCellSize = minCellSize;
+	cellSize = newCellSize;
 
-	float newGridX = (x - xoffset) / newCellSize;
-	float newGridY = (y - yoffset) / newCellSize;
+	auto [newGridX, newGridY] = lifePointFromScreenPoint(x, y);
 
 	float errorx = gridx - newGridX;
 	float errory = gridy - newGridY;
 
 	xoffset -= errorx*newCellSize;
 	yoffset -= errory*newCellSize;
-	cellSize = newCellSize;
 }
 
 void WorldWindow::renderGrid(SDL_Renderer* renderer) {

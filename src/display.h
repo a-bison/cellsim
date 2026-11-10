@@ -27,6 +27,8 @@ SDL_FPoint calcTextSize(const std::string& str);
 
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h);
 
+life::SPoint sPointFromFPoint(const SDL_FPoint& pt);
+
 struct WorldWindow {
 	static constexpr float minCellSize = 1.0f;
 
@@ -38,11 +40,10 @@ struct WorldWindow {
 
 	void setCellSize(float newCellSize);
 
-	SDL_FPoint sdlPointFromLifePoint(size_t x, size_t y);
-	SDL_FPoint sdlPointFromLifePoint(const life::Point& pt);
+	SDL_FPoint screenPointFromLifePoint(size_t x, size_t y);
 
-	life::Point lifePointFromSdlPoint(float x, float y);
-	life::Point lifePointFromSdlPoint(const SDL_FPoint& pt);
+	// Note: Returned as float values for convenience in a few places.
+	SDL_FPoint lifePointFromScreenPoint(float x, float y);
 
 	void initCellRect(SDL_FRect& rect);
 	void updateCellRectPos(SDL_FRect& rect, int x, int y);

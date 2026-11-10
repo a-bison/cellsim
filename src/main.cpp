@@ -143,12 +143,13 @@ void renderUi(AppState& state) {
 	SDL_SetRenderScale(renderer, state.textScale, state.textScale);
 
 	float lineHeight = display::calcTextSize("H").y;
+	float xcursor = state.textPadding;
 	float ycursor = state.textPadding;
 
 	// FPS counter
 	display::renderTextFormat(
 		renderer,
-		state.textPadding,
+		xcursor,
 		ycursor,
 		"{:.2f} FPS ({:.2f} ms)",
 		1000.0f / state.averageFrameTime,
@@ -160,13 +161,31 @@ void renderUi(AppState& state) {
 	// TPS counter
 	display::renderTextFormat(
 		renderer,
-		state.textPadding,
+		xcursor,
 		ycursor,
 		"{:.2f} TPS ({:.2f}/{} ms)",
 		1000.0f / state.lifeState.averageTickTime,
 		state.lifeState.averageTickTime,
 		state.lifeState.tickms
 	);
+
+	float mouseX;
+	float mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
+
+	auto pt = state.worldWindow.lifePointFromScreenPoint(mouseX, mouseY);
+	std::string pos = std::format("({},{})", pt.x, pt.y);
+
+	int w;
+	int h;
+	SDL_GetRenderOutputSize(renderer, &w, &h);
+
+	auto [textWidth, textHeight] = display::calcTextSize(pos);
+
+	xcursor = (w - textWidth*state.textScale - state.textPadding) / state.textScale;
+	ycursor = (h - textHeight*state.textScale - state.textPadding) / state.textScale;
+
+	display::renderText(renderer, xcursor, ycursor, pos);
 
 	SDL_SetRenderScale(renderer, oldScaleX, oldScaleY);
 }
