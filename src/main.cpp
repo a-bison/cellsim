@@ -78,6 +78,7 @@ SDL_AppResult handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
 		return SDL_APP_SUCCESS;
 	case SDLK_SPACE:
 		state.lifeState.paused = !state.lifeState.paused;
+		state.lifeState.lastTickTime = SDL_GetTicks();
 		break;
 	case SDLK_E:
 		if (state.lifeState.paused) {
