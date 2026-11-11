@@ -13,17 +13,58 @@ void renderGridLines(SDL_Renderer* renderer, float xoffset, float yoffset, float
 // the debug text for now.
 void renderText(SDL_Renderer* renderer, float x, float y, const std::string& str);
 
-template<typename... Args>
-void renderTextFormat(
-	SDL_Renderer* renderer,
-	float x,
-	float y,
-	std::format_string<Args...> fmt,
-	Args&&... args
-);
-
 // Returns width in x, height in y.
-SDL_FPoint calcTextSize(const std::string& str);
+SDL_FPoint calcTextSize(const std::string& str, float textScale=1.0f);
+
+struct Color {
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+	uint8_t a;
+};
+
+struct UiStyle {
+	SDL_FPoint regionPadding { 2.0f, 2.0f };
+
+	float textScale = 2.0f;
+	float textPadding = 2.0f;
+	Color textColor { 255, 255, 255, 255 };
+};
+
+enum class HorizontalAlignment {
+	left,
+	right
+};
+
+enum class VerticalAlignment {
+	top,
+	bottom
+};
+
+struct Ui {
+	SDL_Renderer* renderer;
+	UiStyle style;
+
+	SDL_FPoint cursor;
+	SDL_FRect renderArea;
+	HorizontalAlignment halign = HorizontalAlignment::left;
+	VerticalAlignment valign = VerticalAlignment::top;
+
+	void setAlign(HorizontalAlignment align);
+	void setAlign(VerticalAlignment align);
+	void setAlign(HorizontalAlignment h, VerticalAlignment v);
+	void setAlign(VerticalAlignment v, HorizontalAlignment h);
+
+	void updateRenderArea();
+	void resetCursor();
+	void advanceCursor(float w, float h);
+	SDL_FPoint calcRenderLocation(float w, float h);
+
+	void text(const std::string& str);
+
+	template<typename... Args>
+	void textFormat(std::format_string<Args...> fmt, Args&&... args);
+};
 
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h);
 

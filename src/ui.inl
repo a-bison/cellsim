@@ -1,14 +1,8 @@
 namespace ui {
 template<typename... Args>
-void renderTextFormat(
-	SDL_Renderer* renderer,
-	float x,
-	float y,
-	std::format_string<Args...> fmt,
-	Args&&... args
-) {
+void Ui::textFormat(std::format_string<Args...> fmt, Args&&... args) {
 	auto s = std::format(fmt, std::forward<Args>(args)...);
-	renderText(renderer, x, y, s);
+	text(s);
 }
 
 template<size_t W, size_t H>

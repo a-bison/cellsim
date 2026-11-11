@@ -40,11 +40,100 @@ void renderText(SDL_Renderer* renderer, float x, float y, const std::string& str
 	SDL_RenderDebugText(renderer, x, y, str.c_str());
 }
 
-SDL_FPoint calcTextSize(const std::string& str) {
+SDL_FPoint calcTextSize(const std::string& str, float textScale) {
 	return {
-		static_cast<float>(str.size() * SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE),
-		static_cast<float>(SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE)
+		static_cast<float>(str.size() * SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) * textScale,
+		static_cast<float>(SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) * textScale
 	};
+}
+
+void Ui::setAlign(HorizontalAlignment align) { halign = align; }
+
+void Ui::setAlign(VerticalAlignment align) { valign = align; }
+
+void Ui::setAlign(HorizontalAlignment h, VerticalAlignment v) {
+	halign = h;
+	valign = v;
+}
+
+void Ui::setAlign(VerticalAlignment v, HorizontalAlignment h) {
+	halign = h;
+	valign = v;
+}
+
+void Ui::updateRenderArea() {
+	renderArea.x = style.regionPadding.x;
+	renderArea.y = style.regionPadding.y;
+
+	int w;
+	int h;
+	SDL_GetRenderOutputSize(renderer, &w, &h);
+
+	renderArea.w = static_cast<float>(w) - style.regionPadding.x;
+	renderArea.h = static_cast<float>(h) - style.regionPadding.y;
+}
+
+void Ui::resetCursor() {
+	if (halign == HorizontalAlignment::left) {
+		cursor.x = renderArea.x;
+	} else {
+		cursor.x = renderArea.x + renderArea.w;
+	}
+
+	if (valign == VerticalAlignment::top) {
+		cursor.y = renderArea.y;
+	} else {
+		cursor.y = renderArea.y + renderArea.h;
+	}
+}
+
+void Ui::advanceCursor(float w, float h) {
+	if (valign == VerticalAlignment::top) {
+		cursor.y += h;
+	} else {
+		cursor.y -= h;
+	}
+}
+
+SDL_FPoint Ui::calcRenderLocation(float w, float h) {
+	SDL_FPoint pt;
+
+	if (halign == HorizontalAlignment::left) {
+		pt.x = cursor.x;
+	} else {
+		pt.x = cursor.x - w;
+	}
+
+	if (valign == VerticalAlignment::top) {
+		pt.y = cursor.y;
+	} else {
+		pt.y = cursor.y - h;
+	}
+
+	return pt;
+}
+
+void Ui::text(const std::string& str) {
+	float oldScaleX;
+	float oldScaleY;
+
+	SDL_GetRenderScale(renderer, &oldScaleX, &oldScaleY);
+	SDL_SetRenderScale(renderer, style.textScale, style.textScale);
+
+	SDL_SetRenderDrawColor(
+		renderer,
+		style.textColor.r,
+		style.textColor.g,
+		style.textColor.b,
+		style.textColor.a
+	);
+
+	auto [w, h] = calcTextSize(str, style.textScale);
+	auto renderPt = calcRenderLocation(w, h);
+	renderText(renderer, renderPt.x/style.textScale, renderPt.y/style.textScale, str);
+	advanceCursor(w+style.textPadding, h+style.textPadding);
+
+	SDL_SetRenderScale(renderer, oldScaleX, oldScaleY);
 }
 
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {

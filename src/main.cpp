@@ -31,9 +31,8 @@ struct LifeState {
 struct AppState {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
+	ui::Ui uiState;
 
-	float textScale = 2.0f;
-	float textPadding = 2.0f;
 	uint64_t lastTime = 0;
 	float averageFrameTime = 0.0f;
 
@@ -64,6 +63,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	__state.worldWindow.setCellSize(CELLSIZE);
 
 	SDL_SetRenderVSync(__state.renderer, 1);
+
+	__state.uiState.renderer = __state.renderer;
 
 	__state.world.backBuffer().randomize();
 	__state.world.swap();
@@ -134,61 +135,38 @@ void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t cu
 }
 
 void renderUi(AppState& state) {
-	auto* renderer = state.renderer;
+	auto uiState = state.uiState;
 
-	float oldScaleX;
-	float oldScaleY;
+	uiState.updateRenderArea();
 
-	SDL_GetRenderScale(renderer, &oldScaleX, &oldScaleY);
-	SDL_SetRenderScale(renderer, state.textScale, state.textScale);
-
-	float lineHeight = ui::calcTextSize("H").y;
-	float xcursor = state.textPadding;
-	float ycursor = state.textPadding;
+	uiState.setAlign(ui::VerticalAlignment::top, ui::HorizontalAlignment::left);
+	uiState.resetCursor();
 
 	// FPS counter
-	ui::renderTextFormat(
-		renderer,
-		xcursor,
-		ycursor,
+	uiState.textFormat(
 		"{:.2f} FPS ({:.2f} ms)",
 		1000.0f / state.averageFrameTime,
 		state.averageFrameTime
 	);
 
-	ycursor += state.textPadding + lineHeight;
-
 	// TPS counter
-	ui::renderTextFormat(
-		renderer,
-		xcursor,
-		ycursor,
+	uiState.textFormat(
 		"{:.2f} TPS ({:.2f}/{} ms)",
 		1000.0f / state.lifeState.averageTickTime,
 		state.lifeState.averageTickTime,
 		state.lifeState.tickms
 	);
 
+	uiState.setAlign(ui::VerticalAlignment::bottom, ui::HorizontalAlignment::right);
+	uiState.resetCursor();
+
+	// Life grid position
 	float mouseX;
 	float mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
-
 	auto pt = state.worldWindow.lifePointFromScreenPoint(mouseX, mouseY);
 	auto pt_int = ui::sPointFromFPoint(pt);
-	std::string pos = std::format("({},{})", pt_int.x, pt_int.y);
-
-	int w;
-	int h;
-	SDL_GetRenderOutputSize(renderer, &w, &h);
-
-	auto [textWidth, textHeight] = ui::calcTextSize(pos);
-
-	xcursor = (w - textWidth*state.textScale - state.textPadding) / state.textScale;
-	ycursor = (h - textHeight*state.textScale - state.textPadding) / state.textScale;
-
-	ui::renderText(renderer, xcursor, ycursor, pos);
-
-	SDL_SetRenderScale(renderer, oldScaleX, oldScaleY);
+	uiState.textFormat("({},{})", pt_int.x, pt_int.y);
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
