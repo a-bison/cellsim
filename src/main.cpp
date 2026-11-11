@@ -164,41 +164,53 @@ void renderUi(AppState& state) {
 	float mouseX;
 	float mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
-	auto pt = state.worldWindow.lifePointFromScreenPoint(mouseX, mouseY);
-	auto pt_int = ui::sPointFromFPoint(pt);
-	uiState.textFormat("({},{})", pt_int.x, pt_int.y);
+	auto pt = state.worldWindow.lifeSPointFromScreenPoint(mouseX, mouseY);
+	uiState.textFormat("({},{})", pt.x, pt.y);
 
 	// Zoom
 	uiState.textFormat("Z{:.2f}", state.worldWindow.cellSize);
+}
+
+void processMouse(AppState& state) {
+	float relMouseX;
+	float relMouseY;
+	auto mouseButtons = SDL_GetRelativeMouseState(&relMouseX, &relMouseY);
+
+	if (mouseButtons & SDL_BUTTON_MMASK) {
+		state.worldWindow.xoffset += relMouseX;
+		state.worldWindow.yoffset += relMouseY;
+	}
+
+	float mouseX;
+	float mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
+
+	if (mouseButtons & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK)) {
+		auto [cellX, cellY] = state.worldWindow.lifeSPointFromScreenPoint(mouseX, mouseY);
+		bool value = bool(mouseButtons & SDL_BUTTON_LMASK);
+		state.world.frontBufferWritable().set(cellX, cellY, value);
+	}
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
 	auto& state = *reinterpret_cast<AppState*>(appstate);
 	auto* renderer = state.renderer;
 
+	// Time stuff
 	uint64_t currentTime = SDL_GetTicks();
 	uint64_t frameDelta = currentTime - state.lastTime;
 	state.lastTime = currentTime;
 	state.averageFrameTime = rollingAverage(state.averageFrameTime, frameDelta);
 
+	// Do state updates
+	processMouse(state);
 	processLifeTick(state.world, state.lifeState, currentTime);
 
-	float mouseX;
-	float mouseY;
-	auto mouseButtons = SDL_GetRelativeMouseState(&mouseX, &mouseY);
-	if (mouseButtons & SDL_BUTTON_MMASK) {
-		state.worldWindow.xoffset += mouseX;
-		state.worldWindow.yoffset += mouseY;
-	}
-
+	// Render
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_RenderClear(renderer);
-
 	state.worldWindow.renderWorld(renderer, state.world);
-
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	renderUi(state);
-
 	SDL_RenderPresent(renderer);
 
 	return SDL_APP_CONTINUE;

@@ -86,6 +86,8 @@ struct WorldWindow {
 	// Note: Returned as float values for convenience in a few places.
 	SDL_FPoint lifePointFromScreenPoint(float x, float y);
 
+	life::SPoint lifeSPointFromScreenPoint(float x, float y);
+
 	void initCellRect(SDL_FRect& rect);
 	void updateCellRectPos(SDL_FRect& rect, int x, int y);
 

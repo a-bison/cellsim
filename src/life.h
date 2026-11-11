@@ -51,8 +51,9 @@ struct World {
 	std::array<Buffer<W, H>, 2> __buffers;
 	size_t __bufferIndex = 0;
 
-	// The buffer that is ready to display. Should only ever be read from.
+	// The buffer that is ready to display.
 	const Buffer<W, H>& frontBuffer() const;
+	Buffer<W, H>& frontBufferWritable();
 
 	// The buffer that is being written to for a new tick.
 	Buffer<W, H>& backBuffer();

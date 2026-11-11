@@ -87,6 +87,11 @@ const Buffer<W, H>& World<W, H>::frontBuffer() const {
 }
 
 template<size_t W, size_t H>
+Buffer<W, H>& World<W, H>::frontBufferWritable() {
+	return __buffers[__bufferIndex];
+}
+
+template<size_t W, size_t H>
 Buffer<W, H>& World<W, H>::backBuffer() {
 	return __buffers[1-__bufferIndex];
 }
