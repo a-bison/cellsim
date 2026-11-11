@@ -167,6 +167,9 @@ void renderUi(AppState& state) {
 	auto pt = state.worldWindow.lifePointFromScreenPoint(mouseX, mouseY);
 	auto pt_int = ui::sPointFromFPoint(pt);
 	uiState.textFormat("({},{})", pt_int.x, pt_int.y);
+
+	// Zoom
+	uiState.textFormat("Z{:.2f}", state.worldWindow.cellSize);
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
