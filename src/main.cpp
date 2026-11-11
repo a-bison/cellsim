@@ -89,6 +89,9 @@ SDL_AppResult handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
 		state.world.backBuffer().randomize();
 		state.world.swap();
 		break;
+	case SDLK_C:
+		state.world.backBuffer().clear();
+		state.world.swap();
 	default:
 		break;
 	}

@@ -5,7 +5,7 @@
 namespace life {
 template<size_t W, size_t H>
 Buffer<W, H>::Buffer() {
-	std::fill(__data.begin(), __data.end(), false);
+	clear();
 }
 
 template<size_t W, size_t H>
@@ -16,6 +16,11 @@ size_t Buffer<W, H>::__ix(signed_size_t x, signed_size_t y) {
 template<size_t W, size_t H>
 bool Buffer<W, H>::inBounds(signed_size_t x, signed_size_t y) {
 	return x >=0 && x < W && y >=0 && y < H;
+}
+
+template<size_t W, size_t H>
+void Buffer<W, H>::clear() {
+	std::fill(__data.begin(), __data.end(), false);
 }
 
 template<size_t W, size_t H>

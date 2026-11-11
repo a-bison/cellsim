@@ -25,6 +25,8 @@ struct Buffer {
 	static size_t __ix(signed_size_t x, signed_size_t y);
 	static bool inBounds(signed_size_t x, signed_size_t y);
 
+	void clear();
+
 	bool get(signed_size_t x, signed_size_t y) const;
 	bool get(Point pt) const;
 
