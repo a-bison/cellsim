@@ -147,6 +147,69 @@ void popSdlRenderProperty(SDL_Renderer* renderer) {
 	getSdlRenderPropertyStack(renderer).pop();
 }
 
+UiStylePropertyStack::UiStylePropertyStack(UiStyle* _style) : style { _style } {}
+
+void UiStylePropertyStack::push(const UiStyleProperty& property) {
+	UiStyleProperty pushedProperty;
+	pushedProperty.type = property.type;
+
+	// TODO: This sucks.
+	switch (property.type) {
+	case UiStylePropertyType::RegionPadding:
+		pushedProperty.fpointValue = style->regionPadding;
+		style->regionPadding = property.fpointValue;
+		break;
+	case UiStylePropertyType::TextScale:
+		pushedProperty.floatValue = style->textScale;
+		style->textScale = property.floatValue;
+		break;
+	case UiStylePropertyType::TextPadding:
+		pushedProperty.floatValue = style->textPadding;
+		style->textPadding = property.floatValue;
+		break;
+	case UiStylePropertyType::TextColor:
+		pushedProperty.colorValue = style->textColor;
+		style->textColor = property.colorValue;
+		break;
+	case UiStylePropertyType::TextBackground:
+		pushedProperty.colorValue = style->textBackground;
+		style->textBackground = property.colorValue;
+		break;
+	default:
+		break;
+	}
+
+	stack.push_back(pushedProperty);
+}
+
+void UiStylePropertyStack::pop() {
+	if (stack.size() == 0) return;
+
+	auto& property = stack.back();
+
+	switch (property.type) {
+	case UiStylePropertyType::RegionPadding:
+		style->regionPadding = property.fpointValue;
+		break;
+	case UiStylePropertyType::TextScale:
+		style->textScale = property.floatValue;
+		break;
+	case UiStylePropertyType::TextPadding:
+		style->textPadding = property.floatValue;
+		break;
+	case UiStylePropertyType::TextColor:
+		style->textColor = property.colorValue;
+		break;
+	case UiStylePropertyType::TextBackground:
+		style->textBackground = property.colorValue;
+		break;
+	default:
+		break;
+	}
+
+	stack.pop_back();
+}
+
 void Ui::setAlign(HorizontalAlignment align) { halign = align; }
 
 void Ui::setAlign(VerticalAlignment align) { valign = align; }
@@ -214,6 +277,31 @@ SDL_FPoint Ui::calcRenderLocation(float w, float h) {
 }
 
 void Ui::text(const std::string& str) {
+	bool textBackgroundEnabled = style.textBackground.a > 0;
+
+	auto [w, h] = calcTextSize(str, style.textScale);
+	auto renderPt = calcRenderLocation(w, h);
+
+	if (textBackgroundEnabled) {
+		pushSdlRenderProperty(renderer, {
+			.type = SdlRenderPropertyType::DrawBlendMode,
+			.blendModeValue = SDL_BLENDMODE_BLEND
+		});
+
+		pushSdlRenderProperty(renderer, {
+			.type = SdlRenderPropertyType::DrawColor,
+			.colorValue = style.textBackground
+		});
+
+		SDL_FRect bgRect { renderPt.x, renderPt.y, w, h + style.textPadding };
+		if (valign == VerticalAlignment::bottom) bgRect.y += 1.0f;
+
+		SDL_RenderFillRect(renderer, &bgRect);
+
+		popSdlRenderProperty(renderer);
+		popSdlRenderProperty(renderer);
+	}
+
 	pushSdlRenderProperty(renderer, {
 		.type = SdlRenderPropertyType::Scale,
 		.fpointValue = { style.textScale, style.textScale }
@@ -224,13 +312,12 @@ void Ui::text(const std::string& str) {
 		.colorValue = style.textColor
 	});
 
-	auto [w, h] = calcTextSize(str, style.textScale);
-	auto renderPt = calcRenderLocation(w, h);
 	renderText(renderer, renderPt.x/style.textScale, renderPt.y/style.textScale, str);
-	advanceCursor(w+style.textPadding, h+style.textPadding);
 
 	popSdlRenderProperty(renderer);
 	popSdlRenderProperty(renderer);
+
+	advanceCursor(w+style.textPadding, h+style.textPadding);
 }
 
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {

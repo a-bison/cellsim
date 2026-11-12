@@ -24,29 +24,6 @@ struct Color {
 	uint8_t a;
 };
 
-struct UiStyle {
-	SDL_FPoint regionPadding { 2.0f, 2.0f };
-
-	float textScale = 2.0f;
-	float textPadding = 2.0f;
-	Color textColor { 255, 255, 255, 255 };
-};
-
-enum class HorizontalAlignment {
-	left,
-	right
-};
-
-enum class VerticalAlignment {
-	top,
-	bottom
-};
-
-enum class SdlRenderPropertyType {
-	DrawColor,
-	DrawBlendMode,
-	Scale
-};
 
 template<typename T>
 struct RenderProperty {
@@ -55,7 +32,14 @@ struct RenderProperty {
 		Color colorValue;
 		SDL_BlendMode blendModeValue;
 		SDL_FPoint fpointValue;
+		float floatValue;
 	};
+};
+
+enum class SdlRenderPropertyType {
+	DrawColor,
+	DrawBlendMode,
+	Scale
 };
 
 using SdlRenderProperty = RenderProperty<SdlRenderPropertyType>;
@@ -74,14 +58,58 @@ SdlRenderPropertyStack& getSdlRenderPropertyStack(SDL_Renderer* renderer);
 void pushSdlRenderProperty(SDL_Renderer* renderer, const SdlRenderProperty& property);
 void popSdlRenderProperty(SDL_Renderer* renderer);
 
+struct UiStyle {
+	SDL_FPoint regionPadding { 2.0f, 2.0f };
+
+	float textScale = 2.0f;
+	float textPadding = 2.0f;
+	Color textColor { 255, 255, 255, 255 };
+	Color textBackground { 0, 0, 0, 0 };
+};
+
+enum class UiStylePropertyType {
+	RegionPadding,
+	TextScale,
+	TextPadding,
+	TextColor,
+	TextBackground
+};
+
+using UiStyleProperty = RenderProperty<UiStylePropertyType>;
+
+struct UiStylePropertyStack {
+	UiStyle* style;
+	std::vector<UiStyleProperty> stack;
+
+	UiStylePropertyStack(UiStyle* style);
+
+	void push(const UiStyleProperty& property);
+	void pop();
+};
+
+enum class HorizontalAlignment {
+	left,
+	right
+};
+
+enum class VerticalAlignment {
+	top,
+	bottom
+};
+
 struct Ui {
 	SDL_Renderer* renderer;
 	UiStyle style;
+	UiStylePropertyStack styleStack { &style };
 
 	SDL_FPoint cursor;
 	SDL_FRect renderArea;
 	HorizontalAlignment halign = HorizontalAlignment::left;
 	VerticalAlignment valign = VerticalAlignment::top;
+
+	Ui() = default;
+	Ui(const Ui&) = delete;
+	Ui(Ui&&) = delete;
 
 	void setAlign(HorizontalAlignment align);
 	void setAlign(VerticalAlignment align);

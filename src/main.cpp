@@ -139,7 +139,12 @@ void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t cu
 }
 
 void renderUi(AppState& state) {
-	auto uiState = state.uiState;
+	auto& uiState = state.uiState;
+
+	uiState.styleStack.push({
+		.type = ui::UiStylePropertyType::TextBackground,
+		.colorValue = { 0, 0, 0, 130 }
+	});
 
 	uiState.updateRenderArea();
 
@@ -173,6 +178,8 @@ void renderUi(AppState& state) {
 
 	// Zoom
 	uiState.textFormat("Z{:.2f}", state.worldWindow.cellSize);
+
+	uiState.styleStack.pop();
 }
 
 void processMouse(AppState& state) {
