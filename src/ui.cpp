@@ -1,6 +1,9 @@
 #include "ui.h"
 
 #include <cmath>
+#include <unordered_map>
+
+static std::unordered_map<void*, ui::SdlRenderPropertyStack> __sdlPropStacks;
 
 namespace ui {
 void renderVerticalLine(SDL_Renderer* renderer, float x, float h) {
@@ -45,6 +48,103 @@ SDL_FPoint calcTextSize(const std::string& str, float textScale) {
 		static_cast<float>(str.size() * SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) * textScale,
 		static_cast<float>(SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) * textScale
 	};
+}
+
+SdlRenderPropertyStack::SdlRenderPropertyStack(SDL_Renderer* _renderer)
+: renderer { _renderer } {}
+
+void SdlRenderPropertyStack::push(const SdlRenderProperty& property) {
+	SdlRenderProperty pushedProperty;
+	pushedProperty.type = property.type;
+
+	switch (property.type) {
+	case SdlRenderPropertyType::DrawColor:
+		SDL_GetRenderDrawColor(
+			renderer,
+			&pushedProperty.colorValue.r,
+			&pushedProperty.colorValue.g,
+			&pushedProperty.colorValue.b,
+			&pushedProperty.colorValue.a
+		);
+		SDL_SetRenderDrawColor(
+			renderer,
+			property.colorValue.r,
+			property.colorValue.g,
+			property.colorValue.b,
+			property.colorValue.a
+		);
+		break;
+	case SdlRenderPropertyType::DrawBlendMode:
+		SDL_GetRenderDrawBlendMode(renderer, &pushedProperty.blendModeValue);
+		SDL_SetRenderDrawBlendMode(renderer, property.blendModeValue);
+		break;
+	case SdlRenderPropertyType::Scale:
+		SDL_GetRenderScale(
+			renderer,
+			&pushedProperty.fpointValue.x,
+			&pushedProperty.fpointValue.y
+		);
+		SDL_SetRenderScale(
+			renderer,
+			property.fpointValue.x,
+			property.fpointValue.y
+		);
+		break;
+	default:
+		break;
+	}
+
+	stack.push_back(pushedProperty);
+}
+
+void SdlRenderPropertyStack::pop() {
+	if (stack.size() == 0) return;
+
+	auto& property = stack.back();
+
+	switch (property.type) {
+	case SdlRenderPropertyType::DrawColor:
+		SDL_SetRenderDrawColor(
+			renderer,
+			property.colorValue.r,
+			property.colorValue.g,
+			property.colorValue.b,
+			property.colorValue.a
+		);
+		break;
+	case SdlRenderPropertyType::DrawBlendMode:
+		SDL_SetRenderDrawBlendMode(renderer, property.blendModeValue);
+		break;
+	case SdlRenderPropertyType::Scale:
+		SDL_SetRenderScale(
+			renderer,
+			property.fpointValue.x,
+			property.fpointValue.y
+		);
+		break;
+	default:
+		break;
+	}
+
+	stack.pop_back();
+}
+
+SdlRenderPropertyStack& getSdlRenderPropertyStack(SDL_Renderer* renderer) {
+	void* vptr = reinterpret_cast<void*>(renderer);
+
+	if (!__sdlPropStacks.contains(renderer)) {
+		__sdlPropStacks.emplace(vptr, renderer);
+	}
+
+	return __sdlPropStacks.at(vptr);
+}
+
+void pushSdlRenderProperty(SDL_Renderer* renderer, const SdlRenderProperty& property) {
+	getSdlRenderPropertyStack(renderer).push(property);
+}
+
+void popSdlRenderProperty(SDL_Renderer* renderer) {
+	getSdlRenderPropertyStack(renderer).pop();
 }
 
 void Ui::setAlign(HorizontalAlignment align) { halign = align; }
@@ -114,26 +214,23 @@ SDL_FPoint Ui::calcRenderLocation(float w, float h) {
 }
 
 void Ui::text(const std::string& str) {
-	float oldScaleX;
-	float oldScaleY;
+	pushSdlRenderProperty(renderer, {
+		.type = SdlRenderPropertyType::Scale,
+		.fpointValue = { style.textScale, style.textScale }
+	});
 
-	SDL_GetRenderScale(renderer, &oldScaleX, &oldScaleY);
-	SDL_SetRenderScale(renderer, style.textScale, style.textScale);
-
-	SDL_SetRenderDrawColor(
-		renderer,
-		style.textColor.r,
-		style.textColor.g,
-		style.textColor.b,
-		style.textColor.a
-	);
+	pushSdlRenderProperty(renderer, {
+		.type = SdlRenderPropertyType::DrawColor,
+		.colorValue = style.textColor
+	});
 
 	auto [w, h] = calcTextSize(str, style.textScale);
 	auto renderPt = calcRenderLocation(w, h);
 	renderText(renderer, renderPt.x/style.textScale, renderPt.y/style.textScale, str);
 	advanceCursor(w+style.textPadding, h+style.textPadding);
 
-	SDL_SetRenderScale(renderer, oldScaleX, oldScaleY);
+	popSdlRenderProperty(renderer);
+	popSdlRenderProperty(renderer);
 }
 
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {
@@ -214,16 +311,20 @@ void WorldWindow::renderGrid(SDL_Renderer* renderer) {
 	if (cellSize <= gridFadeStart) {
 		gridAlpha *= (cellSize - minCellSize) / (gridFadeStart - minCellSize);
 	}
-	SDL_BlendMode oldMode;
-	SDL_GetRenderDrawBlendMode(renderer, &oldMode);
-	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+	pushSdlRenderProperty(renderer, {
+		.type = SdlRenderPropertyType::DrawBlendMode,
+		.blendModeValue = SDL_BLENDMODE_BLEND
+	});
+
 	SDL_SetRenderDrawColor(
 		renderer,
 		50, 50, 50,
 		static_cast<uint8_t>(gridAlpha)
 	);
 	renderGridLines(renderer, xoffset, yoffset, cellSize);
-	SDL_SetRenderDrawBlendMode(renderer, oldMode);
+
+	popSdlRenderProperty(renderer);
 }
 
 void WorldWindow::renderBorder(SDL_Renderer* renderer, size_t worldWidth, size_t worldHeight) {

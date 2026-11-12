@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <SDL3/SDL.h>
 
 #include "life.h"
@@ -40,6 +41,38 @@ enum class VerticalAlignment {
 	top,
 	bottom
 };
+
+enum class SdlRenderPropertyType {
+	DrawColor,
+	DrawBlendMode,
+	Scale
+};
+
+template<typename T>
+struct RenderProperty {
+	T type;
+	union {
+		Color colorValue;
+		SDL_BlendMode blendModeValue;
+		SDL_FPoint fpointValue;
+	};
+};
+
+using SdlRenderProperty = RenderProperty<SdlRenderPropertyType>;
+
+struct SdlRenderPropertyStack {
+	SDL_Renderer* renderer;
+	std::vector<SdlRenderProperty> stack;
+
+	SdlRenderPropertyStack(SDL_Renderer* _renderer);
+
+	void push(const SdlRenderProperty& property);
+	void pop();
+};
+
+SdlRenderPropertyStack& getSdlRenderPropertyStack(SDL_Renderer* renderer);
+void pushSdlRenderProperty(SDL_Renderer* renderer, const SdlRenderProperty& property);
+void popSdlRenderProperty(SDL_Renderer* renderer);
 
 struct Ui {
 	SDL_Renderer* renderer;
