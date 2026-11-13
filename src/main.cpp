@@ -21,6 +21,16 @@ const life::Point GLIDER[] {
 	{ 2, 2 }
 };
 
+// Standard life rule
+static const unsigned int LIFE_BORN[] { 3 };
+static const unsigned int LIFE_SURVIVE[] { 2, 3 };
+
+// Complimentary life rule
+/*
+static const unsigned int LIFE_BORN[] { 0, 1, 2, 3, 4, 7, 8 };
+static const unsigned int LIFE_SURVIVE[] { 0, 1, 2, 3, 4, 6, 7, 8 };
+*/
+
 struct LifeState {
 	unsigned int tickms = 100;
 	uint64_t lastTickTime = 0;
@@ -65,6 +75,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	SDL_SetRenderVSync(__state.renderer, 1);
 
 	__state.uiState.renderer = __state.renderer;
+
+	__state.world.rule.setBorn(LIFE_BORN);
+	__state.world.rule.setSurvive(LIFE_SURVIVE);
 
 	__state.world.backBuffer().randomize();
 	__state.world.swap();

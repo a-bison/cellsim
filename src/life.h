@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
+#include <set>
 #include <span>
 
 namespace life {
@@ -44,14 +46,30 @@ struct Buffer {
 	void dumpGrid() const;
 };
 
-// Given previous cell state and number of live neighbors, returns whether the
-// cell should be alive or dead next tick
-bool lifeRule(bool alive, unsigned int liveNeighbors);
+struct LifeRule {
+	// Since the number of live neighbors will be eight at maximum, we can
+	// use bitwise operations on 16 bit ints to evaluate rules. (0-8 live
+	// neighbors, 9 bits)
+	uint16_t born;
+	uint16_t survive;
+
+	void clear();
+
+	// Utility methods to set rule in a more comprehensible way
+	void setBorn(std::span<const unsigned int> _born);
+	void setSurvive(std::span<const unsigned int> _survive);
+
+	// Given previous cell state and number of live neighbors, returns whether the
+	// cell should be alive or dead next tick
+	bool eval(bool alive, unsigned int liveNeighbors);
+};
 
 template<size_t W, size_t H>
 struct World {
 	std::array<Buffer<W, H>, 2> __buffers;
 	size_t __bufferIndex = 0;
+
+	LifeRule rule;
 
 	// The buffer that is ready to display.
 	const Buffer<W, H>& frontBuffer() const;

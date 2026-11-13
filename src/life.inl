@@ -115,7 +115,7 @@ void World<W, H>::tick() {
 		for (size_t x = 0; x < W; x++) {
 			bool alive = front.get(x, y);
 			auto count = front.countLiveNeighbors(x, y);
-			bool nextState = lifeRule(alive, count);
+			bool nextState = rule.eval(alive, count);
 			back.set(x, y, nextState);
 		}
 	}
