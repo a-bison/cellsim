@@ -354,17 +354,16 @@ life::SPoint WorldWindow::lifeSPointFromScreenPoint(float x, float y) {
 	return sPointFromFPoint(pt);
 }
 
-void WorldWindow::initCellRect(SDL_FRect& rect) {
-	rect.x = 0.0f;
-	rect.y = 0.0f;
+void WorldWindow::startCellRect(SDL_FRect& rect, int x, int y) {
+	auto pt = screenPointFromLifePoint(x, y);
+	rect.x = pt.x;
+	rect.y = pt.y;
 	rect.w = cellSize;
 	rect.h = cellSize;
 }
 
-void WorldWindow::updateCellRectPos(SDL_FRect& rect, int x, int y) {
-	auto pt = screenPointFromLifePoint(x, y);
-	rect.x = pt.x;
-	rect.y = pt.y;
+void WorldWindow::expandCellRect(SDL_FRect& rect) {
+	rect.w += cellSize;
 }
 
 SDL_FRect WorldWindow::makeBorderRect(size_t worldWidth, size_t worldHeight) {

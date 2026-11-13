@@ -149,8 +149,8 @@ struct WorldWindow {
 
 	life::SPoint lifeSPointFromScreenPoint(float x, float y);
 
-	void initCellRect(SDL_FRect& rect);
-	void updateCellRectPos(SDL_FRect& rect, int x, int y);
+	void startCellRect(SDL_FRect& rect, int x, int y);
+	void expandCellRect(SDL_FRect& rect);
 
 	SDL_FRect makeBorderRect(size_t worldWidth, size_t worldHeight);
 
