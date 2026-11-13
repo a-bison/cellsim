@@ -106,6 +106,14 @@ SDL_AppResult handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
 	case SDLK_C:
 		state.world.backBuffer().clear();
 		state.world.swap();
+		break;
+	case SDLK_UP:
+		state.lifeState.tickms -= 10;
+		if (state.lifeState.tickms < 10) state.lifeState.tickms = 10;
+		break;
+	case SDLK_DOWN:
+		state.lifeState.tickms += 10;
+		break;
 	default:
 		break;
 	}
