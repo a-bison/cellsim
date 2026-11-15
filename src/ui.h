@@ -17,6 +17,8 @@ void renderText(SDL_Renderer* renderer, float x, float y, const std::string& str
 // Returns width in x, height in y.
 SDL_FPoint calcTextSize(const std::string& str, float textScale=1.0f);
 
+SDL_FRect offsetRect(const SDL_FRect& rect, float offsetX, float offsetY);
+
 struct Color {
 	uint8_t r;
 	uint8_t g;
@@ -24,6 +26,20 @@ struct Color {
 	uint8_t a;
 };
 
+enum class HorizontalAlignment {
+	left,
+	right
+};
+
+enum class VerticalAlignment {
+	top,
+	bottom
+};
+
+struct ElementAlignment {
+	HorizontalAlignment h;
+	VerticalAlignment v;
+};
 
 template<typename T>
 struct RenderProperty {
@@ -33,6 +49,7 @@ struct RenderProperty {
 		SDL_BlendMode blendModeValue;
 		SDL_FPoint fpointValue;
 		float floatValue;
+		ElementAlignment alignmentValue;
 	};
 };
 
@@ -58,6 +75,10 @@ SdlRenderPropertyStack& getSdlRenderPropertyStack(SDL_Renderer* renderer);
 void pushSdlRenderProperty(SDL_Renderer* renderer, const SdlRenderProperty& property);
 void popSdlRenderProperty(SDL_Renderer* renderer);
 
+// Utility functions that handle proper juggling of colors with alpha
+void beginSdlTemporaryColor(SDL_Renderer* renderer, const Color& color);
+void endSdlTemporaryColor(SDL_Renderer* renderer, const Color& color);
+
 struct UiStyle {
 	SDL_FPoint regionPadding { 2.0f, 2.0f };
 
@@ -65,6 +86,10 @@ struct UiStyle {
 	float textPadding = 2.0f;
 	Color textColor { 255, 255, 255, 255 };
 	Color textBackground { 0, 0, 0, 0 };
+	ElementAlignment alignment {
+		HorizontalAlignment::left,
+		VerticalAlignment::top
+	};
 };
 
 enum class UiStylePropertyType {
@@ -72,7 +97,8 @@ enum class UiStylePropertyType {
 	TextScale,
 	TextPadding,
 	TextColor,
-	TextBackground
+	TextBackground,
+	Alignment
 };
 
 using UiStyleProperty = RenderProperty<UiStylePropertyType>;
@@ -87,36 +113,115 @@ struct UiStylePropertyStack {
 	void pop();
 };
 
-enum class HorizontalAlignment {
-	left,
-	right
+enum class UiDrawDataType {
+	Rectangle,
+	Text
 };
 
-enum class VerticalAlignment {
-	top,
-	bottom
+struct UiDrawElement {
+	UiDrawDataType type;
+	SDL_FRect bounds;
+	Color color;
+	unsigned int dataId;
 };
+
+struct UiDrawNode {
+	SDL_FRect bounds;
+	std::vector<UiDrawNode> children;
+	std::vector<UiDrawElement> elements;
+};
+
+struct UiDrawRectangleData {
+	bool fill;
+};
+
+struct UiDrawTextData {
+	std::string text;
+	float scale;
+};
+
+struct UiDrawData {
+	std::vector<UiDrawRectangleData> rectData;
+	std::vector<UiDrawTextData> textData;
+
+	UiDrawNode root;
+
+	void reset(const SDL_FRect& bounds);
+};
+
+void debugDrawData(
+	SDL_Renderer* renderer,
+	const UiDrawData& data,
+	bool showElements
+);
+
+void debugDrawNode(
+	SDL_Renderer* renderer,
+	float offsetX,
+	float offsetY,
+	const UiDrawNode& node,
+	bool showElements
+);
+
+void renderDrawData(SDL_Renderer* renderer, const UiDrawData& data);
+
+void renderDrawNode(
+	SDL_Renderer* renderer,
+	float offsetX,
+	float offsetY,
+	const UiDrawData& data,
+	const UiDrawNode& node
+);
+
+void renderDrawRectangleData(
+	SDL_Renderer* renderer,
+	float offsetX,
+	float offsetY,
+	const UiDrawElement& element,
+	const UiDrawRectangleData& rectData
+);
+
+void renderDrawTextData(
+	SDL_Renderer* renderer,
+	float offsetX,
+	float offsetY,
+	const UiDrawElement& element,
+	const UiDrawTextData& textData
+);
 
 struct Ui {
 	SDL_Renderer* renderer;
 	UiStyle style;
 	UiStylePropertyStack styleStack { &style };
 
+	UiDrawData drawData;
+	std::vector<UiDrawNode*> nodeStack;
+
 	SDL_FPoint cursor;
 	SDL_FRect renderArea;
-	HorizontalAlignment halign = HorizontalAlignment::left;
-	VerticalAlignment valign = VerticalAlignment::top;
 
 	Ui() = default;
 	Ui(const Ui&) = delete;
 	Ui(Ui&&) = delete;
 
-	void setAlign(HorizontalAlignment align);
-	void setAlign(VerticalAlignment align);
-	void setAlign(HorizontalAlignment h, VerticalAlignment v);
-	void setAlign(VerticalAlignment v, HorizontalAlignment h);
+	void beginFrame();
 
-	void updateRenderArea();
+	UiDrawNode& currentNode();
+	void beginNode(float w, float h);
+	void endNode();
+	void emitRectangle(
+		const SDL_FRect& bounds,
+		const Color& color,
+		bool fill
+	);
+	void emitText(
+		const SDL_FRect& bounds,
+		const Color& color,
+		float textScale,
+		const std::string& text
+	);
+
+	void setCursorFromBounds(const SDL_FRect& bounds);
 	void resetCursor();
 	void advanceCursor(float w, float h);
 	SDL_FPoint calcRenderLocation(float w, float h);

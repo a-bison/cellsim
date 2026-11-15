@@ -50,6 +50,15 @@ SDL_FPoint calcTextSize(const std::string& str, float textScale) {
 	};
 }
 
+SDL_FRect offsetRect(const SDL_FRect& rect, float offsetX, float offsetY) {
+	return {
+		rect.x + offsetX,
+		rect.y + offsetY,
+		rect.w,
+		rect.h
+	};
+}
+
 SdlRenderPropertyStack::SdlRenderPropertyStack(SDL_Renderer* _renderer)
 : renderer { _renderer } {}
 
@@ -147,6 +156,25 @@ void popSdlRenderProperty(SDL_Renderer* renderer) {
 	getSdlRenderPropertyStack(renderer).pop();
 }
 
+void beginSdlTemporaryColor(SDL_Renderer* renderer, const Color& color) {
+	pushSdlRenderProperty(renderer, {
+		.type = SdlRenderPropertyType::DrawColor,
+		.colorValue = color
+	});
+
+	if (color.a < 255) {
+		pushSdlRenderProperty(renderer, {
+			.type = SdlRenderPropertyType::DrawBlendMode,
+			.blendModeValue = SDL_BLENDMODE_BLEND
+		});
+	}
+}
+
+void endSdlTemporaryColor(SDL_Renderer* renderer, const Color& color) {
+	popSdlRenderProperty(renderer);
+	if (color.a < 255) popSdlRenderProperty(renderer);
+}
+
 UiStylePropertyStack::UiStylePropertyStack(UiStyle* _style) : style { _style } {}
 
 void UiStylePropertyStack::push(const UiStyleProperty& property) {
@@ -175,6 +203,9 @@ void UiStylePropertyStack::push(const UiStyleProperty& property) {
 		pushedProperty.colorValue = style->textBackground;
 		style->textBackground = property.colorValue;
 		break;
+	case UiStylePropertyType::Alignment:
+		pushedProperty.alignmentValue = style->alignment;
+		style->alignment = property.alignmentValue;
 	default:
 		break;
 	}
@@ -203,6 +234,9 @@ void UiStylePropertyStack::pop() {
 	case UiStylePropertyType::TextBackground:
 		style->textBackground = property.colorValue;
 		break;
+	case UiStylePropertyType::Alignment:
+		style->alignment = property.alignmentValue;
+		break;
 	default:
 		break;
 	}
@@ -210,48 +244,255 @@ void UiStylePropertyStack::pop() {
 	stack.pop_back();
 }
 
-void Ui::setAlign(HorizontalAlignment align) { halign = align; }
+void UiDrawData::reset(const SDL_FRect& bounds) {
+	rectData.clear();
+	textData.clear();
+	root.children.clear();
+	root.elements.clear();
 
-void Ui::setAlign(VerticalAlignment align) { valign = align; }
-
-void Ui::setAlign(HorizontalAlignment h, VerticalAlignment v) {
-	halign = h;
-	valign = v;
+	this->root.bounds = bounds;
 }
 
-void Ui::setAlign(VerticalAlignment v, HorizontalAlignment h) {
-	halign = h;
-	valign = v;
+void debugDrawData(
+	SDL_Renderer* renderer,
+	const UiDrawData& data,
+	bool showElements
+) {
+	pushSdlRenderProperty(renderer, {
+		.type = SdlRenderPropertyType::DrawColor,
+		.colorValue = { 255, 0, 0, 255 }
+	});
+	debugDrawNode(renderer, 0.0f, 0.0f, data.root, showElements);
+	popSdlRenderProperty(renderer);
 }
 
-void Ui::updateRenderArea() {
-	renderArea.x = style.regionPadding.x;
-	renderArea.y = style.regionPadding.y;
+void debugDrawNode(
+	SDL_Renderer* renderer,
+	float offsetX,
+	float offsetY,
+	const UiDrawNode& node,
+	bool showElements
+) {
+	auto nodeRect = offsetRect(node.bounds, offsetX, offsetY);
+	SDL_RenderRect(renderer, &nodeRect);
+
+	if (showElements) {
+		pushSdlRenderProperty(renderer, {
+			.type = SdlRenderPropertyType::DrawColor,
+			.colorValue = { 255, 255, 0, 255 }
+		});
+		SDL_FRect elemRect;
+		for (const auto& element : node.elements) {
+			elemRect = offsetRect(node.bounds, offsetX, offsetY);
+			SDL_RenderRect(renderer, &elemRect);
+		}
+		popSdlRenderProperty(renderer);
+	}
+
+	for (const auto& child : node.children) {
+		debugDrawNode(
+			renderer,
+			offsetX + node.bounds.x,
+			offsetY + node.bounds.y,
+			child,
+			showElements
+		);
+	}
+}
+
+void renderDrawData(SDL_Renderer* renderer, const UiDrawData& data) {
+	renderDrawNode(renderer, 0.0f, 0.0f, data, data.root);
+}
+
+void renderDrawNode(
+	SDL_Renderer* renderer,
+	float offsetX,
+	float offsetY,
+	const UiDrawData& data,
+	const UiDrawNode& node
+) {
+	float newOffsetX = offsetX + node.bounds.x;
+	float newOffsetY = offsetY + node.bounds.y;
+
+	for (const auto& elem : node.elements) {
+		switch (elem.type) {
+		case UiDrawDataType::Rectangle:
+			renderDrawRectangleData(
+				renderer,
+				newOffsetX,
+				newOffsetY,
+				elem,
+				data.rectData[elem.dataId]
+			);
+			break;
+		case UiDrawDataType::Text:
+			renderDrawTextData(
+				renderer,
+				newOffsetX,
+				newOffsetY,
+				elem,
+				data.textData[elem.dataId]
+			);
+			break;
+		default:
+			break;
+		}
+	}
+
+	for (const auto& child : node.children) {
+		renderDrawNode(
+			renderer,
+			newOffsetX,
+			newOffsetY,
+			data,
+			child
+		);
+	}
+}
+
+void renderDrawRectangleData(
+	SDL_Renderer* renderer,
+	float offsetX,
+	float offsetY,
+	const UiDrawElement& element,
+	const UiDrawRectangleData& rectData
+) {
+	auto tmpRect = offsetRect(element.bounds, offsetX, offsetY);
+
+	beginSdlTemporaryColor(renderer, element.color);
+	if (rectData.fill) {
+		SDL_RenderFillRect(renderer, &tmpRect);
+	} else {
+		SDL_RenderRect(renderer, &tmpRect);
+	}
+	endSdlTemporaryColor(renderer, element.color);
+}
+
+void renderDrawTextData(
+	SDL_Renderer* renderer,
+	float offsetX,
+	float offsetY,
+	const UiDrawElement& element,
+	const UiDrawTextData& textData
+) {
+	beginSdlTemporaryColor(renderer, element.color);
+	pushSdlRenderProperty(renderer, {
+		.type = SdlRenderPropertyType::Scale,
+		.fpointValue = {textData.scale, textData.scale}
+	});
+	renderText(
+		renderer,
+		(offsetX + element.bounds.x)/textData.scale,
+		(offsetY + element.bounds.y)/textData.scale,
+		textData.text
+	);
+	popSdlRenderProperty(renderer);
+	endSdlTemporaryColor(renderer, element.color);
+}
+
+void Ui::beginFrame() {
+	nodeStack.clear();
 
 	int w;
 	int h;
 	SDL_GetRenderOutputSize(renderer, &w, &h);
 
-	renderArea.w = static_cast<float>(w) - style.regionPadding.x;
-	renderArea.h = static_cast<float>(h) - style.regionPadding.y;
+	SDL_FRect bounds {
+		style.regionPadding.x,
+		style.regionPadding.y,
+		static_cast<float>(w) - 2*style.regionPadding.x,
+		static_cast<float>(h) - 2*style.regionPadding.y
+	};
+
+	drawData.reset(bounds);
+	nodeStack.push_back(&drawData.root);
+}
+
+UiDrawNode& Ui::currentNode() {
+	return *nodeStack.back();
+}
+
+void Ui::beginNode(float w, float h) {
+	currentNode().children.push_back({});
+	auto& newNode = currentNode().children.back();
+
+	auto nodePos = calcRenderLocation(w, h);
+
+	newNode.bounds.x = nodePos.x;
+	newNode.bounds.y = nodePos.y;
+	newNode.bounds.w = w;
+	newNode.bounds.h = h;
+
+	nodeStack.push_back(&newNode);
+}
+
+void Ui::endNode() {
+	nodeStack.pop_back();
+}
+
+void Ui::emitRectangle(
+	const SDL_FRect& bounds,
+	const Color& color,
+	bool fill
+) {
+	drawData.rectData.push_back({fill});
+	unsigned int id = drawData.rectData.size() - 1;
+
+	currentNode().elements.push_back({
+		UiDrawDataType::Rectangle,
+		bounds,
+		color,
+		id
+	});
+}
+
+void Ui::emitText(
+	const SDL_FRect& bounds,
+	const Color& color,
+	float textScale,
+	const std::string& text
+) {
+	drawData.textData.push_back({text, textScale});
+	unsigned int id = drawData.textData.size() - 1;
+
+	currentNode().elements.push_back({
+		UiDrawDataType::Text,
+		bounds,
+		color,
+		id
+	});
+}
+
+void Ui::setCursorFromBounds(const SDL_FRect& bounds) {
+	if (style.alignment.h == HorizontalAlignment::left) {
+		cursor.x = bounds.x;
+	} else {
+		cursor.x = bounds.x + bounds.w;
+	}
+
+	if (style.alignment.v == VerticalAlignment::top) {
+		cursor.y = bounds.y;
+	} else {
+		cursor.y = bounds.y + bounds.h;
+	}
 }
 
 void Ui::resetCursor() {
-	if (halign == HorizontalAlignment::left) {
-		cursor.x = renderArea.x;
+	if (style.alignment.h == HorizontalAlignment::left) {
+		cursor.x = 0.0f;
 	} else {
-		cursor.x = renderArea.x + renderArea.w;
+		cursor.x = currentNode().bounds.w;
 	}
 
-	if (valign == VerticalAlignment::top) {
-		cursor.y = renderArea.y;
+	if (style.alignment.v == VerticalAlignment::top) {
+		cursor.y = 0.0f;
 	} else {
-		cursor.y = renderArea.y + renderArea.h;
+		cursor.y = currentNode().bounds.h;
 	}
 }
 
 void Ui::advanceCursor(float w, float h) {
-	if (valign == VerticalAlignment::top) {
+	if (style.alignment.v == VerticalAlignment::top) {
 		cursor.y += h;
 	} else {
 		cursor.y -= h;
@@ -261,13 +502,13 @@ void Ui::advanceCursor(float w, float h) {
 SDL_FPoint Ui::calcRenderLocation(float w, float h) {
 	SDL_FPoint pt;
 
-	if (halign == HorizontalAlignment::left) {
+	if (style.alignment.h == HorizontalAlignment::left) {
 		pt.x = cursor.x;
 	} else {
 		pt.x = cursor.x - w;
 	}
 
-	if (valign == VerticalAlignment::top) {
+	if (style.alignment.v == VerticalAlignment::top) {
 		pt.y = cursor.y;
 	} else {
 		pt.y = cursor.y - h;
@@ -277,47 +518,30 @@ SDL_FPoint Ui::calcRenderLocation(float w, float h) {
 }
 
 void Ui::text(const std::string& str) {
-	bool textBackgroundEnabled = style.textBackground.a > 0;
-
 	auto [w, h] = calcTextSize(str, style.textScale);
-	auto renderPt = calcRenderLocation(w, h);
+	SDL_FPoint nodeSize {
+		w + 2*style.textPadding,
+		h + 2*style.textPadding
+	};
 
-	if (textBackgroundEnabled) {
-		pushSdlRenderProperty(renderer, {
-			.type = SdlRenderPropertyType::DrawBlendMode,
-			.blendModeValue = SDL_BLENDMODE_BLEND
-		});
+	beginNode(nodeSize.x, nodeSize.y);
 
-		pushSdlRenderProperty(renderer, {
-			.type = SdlRenderPropertyType::DrawColor,
-			.colorValue = style.textBackground
-		});
-
-		SDL_FRect bgRect { renderPt.x, renderPt.y, w, h + style.textPadding };
-		if (valign == VerticalAlignment::bottom) bgRect.y += 1.0f;
-
-		SDL_RenderFillRect(renderer, &bgRect);
-
-		popSdlRenderProperty(renderer);
-		popSdlRenderProperty(renderer);
+	if (style.textBackground.a > 0) {
+		SDL_FRect bgBounds { 0.0f, 0.0f, nodeSize.x, nodeSize.y };
+		emitRectangle(bgBounds, style.textBackground, true);
 	}
 
-	pushSdlRenderProperty(renderer, {
-		.type = SdlRenderPropertyType::Scale,
-		.fpointValue = { style.textScale, style.textScale }
-	});
+	SDL_FRect textBounds {
+		style.textPadding,
+		style.textPadding,
+		w,
+		h
+	};
+	emitText(textBounds, style.textColor, style.textScale, str);
 
-	pushSdlRenderProperty(renderer, {
-		.type = SdlRenderPropertyType::DrawColor,
-		.colorValue = style.textColor
-	});
+	endNode();
 
-	renderText(renderer, renderPt.x/style.textScale, renderPt.y/style.textScale, str);
-
-	popSdlRenderProperty(renderer);
-	popSdlRenderProperty(renderer);
-
-	advanceCursor(w+style.textPadding, h+style.textPadding);
+	advanceCursor(nodeSize.x, nodeSize.y);
 }
 
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {

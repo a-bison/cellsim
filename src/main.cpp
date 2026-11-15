@@ -38,10 +38,20 @@ struct LifeState {
 	bool paused = false;
 };
 
+// Deliberately using non-class enum here for more convenient cycling debug
+// toggle
+enum UiDebugMode {
+	UI_DEBUG_NONE = 0,
+	UI_DEBUG_NODES,
+	UI_DEBUG_ALL,
+	UI_DEBUG_MODE_COUNT
+};
+
 struct AppState {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
 	ui::Ui uiState;
+	UiDebugMode uiDebug = UI_DEBUG_NONE;
 
 	uint64_t lastTime = 0;
 	float averageFrameTime = 0.0f;
@@ -114,6 +124,11 @@ SDL_AppResult handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
 	case SDLK_DOWN:
 		state.lifeState.tickms += 10;
 		break;
+	case SDLK_F1:
+		state.uiDebug = static_cast<UiDebugMode>(
+			(state.uiDebug + 1) % UI_DEBUG_MODE_COUNT
+		);
+		break;
 	default:
 		break;
 	}
@@ -162,14 +177,17 @@ void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t cu
 void renderUi(AppState& state) {
 	auto& uiState = state.uiState;
 
+	uiState.beginFrame();
+
 	uiState.styleStack.push({
 		.type = ui::UiStylePropertyType::TextBackground,
 		.colorValue = { 0, 0, 0, 130 }
 	});
 
-	uiState.updateRenderArea();
-
-	uiState.setAlign(ui::VerticalAlignment::top, ui::HorizontalAlignment::left);
+	uiState.style.alignment = {
+		ui::HorizontalAlignment::left,
+		ui::VerticalAlignment::top
+	};
 	uiState.resetCursor();
 
 	// FPS counter
@@ -187,7 +205,10 @@ void renderUi(AppState& state) {
 		state.lifeState.tickms
 	);
 
-	uiState.setAlign(ui::VerticalAlignment::bottom, ui::HorizontalAlignment::right);
+	uiState.style.alignment = {
+		ui::HorizontalAlignment::right,
+		ui::VerticalAlignment::bottom
+	};
 	uiState.resetCursor();
 
 	// Life grid position
@@ -201,6 +222,17 @@ void renderUi(AppState& state) {
 	uiState.textFormat("Z{:.2f}", state.worldWindow.cellSize);
 
 	uiState.styleStack.pop();
+
+	ui::renderDrawData(state.renderer, uiState.drawData);
+
+	if (state.uiDebug > UI_DEBUG_NONE) {
+		bool showElements = state.uiDebug == UI_DEBUG_ALL;
+		ui::debugDrawData(
+			state.renderer,
+			uiState.drawData,
+			showElements
+		);
+	}
 }
 
 void processMouse(AppState& state) {
