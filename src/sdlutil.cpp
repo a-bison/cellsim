@@ -59,6 +59,10 @@ SDL_FRect offsetRect(const SDL_FRect& rect, float offsetX, float offsetY) {
 	};
 }
 
+SDL_FRect deoffsetRect(const SDL_FRect& rect) {
+	return { 0.0f, 0.0f, rect.w, rect.h };
+}
+
 RenderPropertyStack::RenderPropertyStack(SDL_Renderer* _renderer)
 : renderer { _renderer } {}
 

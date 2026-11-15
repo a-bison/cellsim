@@ -225,6 +225,16 @@ void renderUi(AppState& state) {
 	// Zoom
 	uiState.textFormat("Z{:.2f}", state.worldWindow.cellSize);
 
+	uiState.style.alignment = {
+		HorizontalAlignment::center,
+		VerticalAlignment::bottom
+	};
+	uiState.resetCursor();
+
+	if (state.lifeState.paused) {
+		uiState.text("PAUSED");
+	}
+
 	uiState.styleStack.pop();
 
 	ui::renderDrawData(state.renderer, uiState.drawData);

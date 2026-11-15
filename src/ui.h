@@ -131,7 +131,7 @@ struct Ui {
 	std::vector<UiDrawNode*> nodeStack;
 
 	SDL_FPoint cursor;
-	SDL_FRect renderArea;
+	std::vector<SDL_FPoint> cursorStack;
 
 	Ui() = default;
 	Ui(const Ui&) = delete;
@@ -154,7 +154,9 @@ struct Ui {
 		const std::string& text
 	);
 
-	void setCursorFromBounds(const SDL_FRect& bounds);
+	void pushCursor();
+	void popCursor();
+	void resetCursorInBounds(const SDL_FRect& bounds);
 	void resetCursor();
 	void advanceCursor(float w, float h);
 	SDL_FPoint calcRenderLocation(float w, float h);

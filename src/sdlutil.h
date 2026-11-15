@@ -16,7 +16,11 @@ void renderText(SDL_Renderer* renderer, float x, float y, const std::string& str
 // Returns width in x, height in y.
 SDL_FPoint calcTextSize(const std::string& str, float textScale=1.0f);
 
+// Translates a rectangle.
 SDL_FRect offsetRect(const SDL_FRect& rect, float offsetX, float offsetY);
+
+// Zeros out the x,y coordinates of a rectangle.
+SDL_FRect deoffsetRect(const SDL_FRect& rect);
 
 struct Color {
 	uint8_t r;
@@ -27,11 +31,13 @@ struct Color {
 
 enum class HorizontalAlignment {
 	left,
+	center,
 	right
 };
 
 enum class VerticalAlignment {
 	top,
+	center,
 	bottom
 };
 

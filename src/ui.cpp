@@ -292,35 +292,54 @@ void Ui::emitText(
 	});
 }
 
-void Ui::setCursorFromBounds(const SDL_FRect& bounds) {
-	if (style.alignment.h == HorizontalAlignment::left) {
+void Ui::pushCursor() {
+	cursorStack.push_back(cursor);
+}
+
+void Ui::popCursor() {
+	cursor = cursorStack.back();
+	cursorStack.pop_back();
+}
+
+void Ui::resetCursorInBounds(const SDL_FRect& bounds) {
+	switch (style.alignment.h) {
+	case HorizontalAlignment::left:
 		cursor.x = bounds.x;
-	} else {
+		break;
+	case HorizontalAlignment::center:
+		cursor.x = (bounds.x + bounds.w) / 2.0f;
+		break;
+	case HorizontalAlignment::right:
 		cursor.x = bounds.x + bounds.w;
+		break;
+	default:
+		break;
 	}
 
-	if (style.alignment.v == VerticalAlignment::top) {
+	switch (style.alignment.v) {
+	case VerticalAlignment::top:
 		cursor.y = bounds.y;
-	} else {
+		break;
+	case VerticalAlignment::center:
+		cursor.y = (bounds.y + bounds.h) / 2.0f;
+		break;
+	case VerticalAlignment::bottom:
 		cursor.y = bounds.y + bounds.h;
+		break;
+	default:
+		break;
 	}
 }
 
 void Ui::resetCursor() {
-	if (style.alignment.h == HorizontalAlignment::left) {
-		cursor.x = 0.0f;
-	} else {
-		cursor.x = currentNode().bounds.w;
-	}
-
-	if (style.alignment.v == VerticalAlignment::top) {
-		cursor.y = 0.0f;
-	} else {
-		cursor.y = currentNode().bounds.h;
-	}
+	resetCursorInBounds(sdlutil::deoffsetRect(currentNode().bounds));
 }
 
 void Ui::advanceCursor(float w, float h) {
+	// For now, only advancing down is supported. Because of this,
+	// VerticalAlignment::center is a little tricky. For now, it's only
+	// possible by grouping everything together in a node and doing it
+	// manually.
 	if (style.alignment.v == VerticalAlignment::top) {
 		cursor.y += h;
 	} else {
@@ -331,16 +350,36 @@ void Ui::advanceCursor(float w, float h) {
 SDL_FPoint Ui::calcRenderLocation(float w, float h) {
 	SDL_FPoint pt;
 
-	if (style.alignment.h == HorizontalAlignment::left) {
+	switch (style.alignment.h) {
+	case HorizontalAlignment::left:
 		pt.x = cursor.x;
-	} else {
+		break;
+	case HorizontalAlignment::center:
+		// NOTE: It is assumed that the cursor stays in the middle of
+		// the node bounds horizontally if halign is center
+		pt.x = cursor.x - w/2.0f;
+		break;
+	case HorizontalAlignment::right:
 		pt.x = cursor.x - w;
+		break;
+	default:
+		break;
 	}
 
-	if (style.alignment.v == VerticalAlignment::top) {
+	switch (style.alignment.v) {
+	case VerticalAlignment::top:
 		pt.y = cursor.y;
-	} else {
+		break;
+	case VerticalAlignment::center:
+		// NOTE: It is assumed that the cursor stays in the middle of
+		// the node bounds vertically if valign is center
+		pt.y = cursor.y - h/2.0f;
+		break;
+	case VerticalAlignment::bottom:
 		pt.y = cursor.y - h;
+		break;
+	default:
+		break;
 	}
 
 	return pt;
