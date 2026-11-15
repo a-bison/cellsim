@@ -71,7 +71,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	*appstate = &__state;
 
 	std::srand(std::time(0));
-	
+
 	bool windowCreateSuccess = SDL_CreateWindowAndRenderer(
 		"cellsim",
 		WINDOW_WIDTH, WINDOW_HEIGHT,

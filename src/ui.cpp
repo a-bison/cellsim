@@ -396,7 +396,7 @@ SDL_FPoint WorldWindow::screenPointFromLifePoint(size_t x, size_t y) {
 }
 
 SDL_FPoint WorldWindow::lifePointFromScreenPoint(float x, float y) {
-	return { 
+	return {
 		(x-xoffset)/cellSize,
 		(y-yoffset)/cellSize
 	};
