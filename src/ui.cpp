@@ -3,178 +3,7 @@
 #include <cmath>
 #include <unordered_map>
 
-static std::unordered_map<void*, ui::SdlRenderPropertyStack> __sdlPropStacks;
-
 namespace ui {
-void renderVerticalLine(SDL_Renderer* renderer, float x, float h) {
-	SDL_RenderLine(renderer, x, 0.0f, x, h);
-}
-
-void renderHorizonalLine(SDL_Renderer* renderer, float y, float w) {
-	SDL_RenderLine(renderer, 0.0f, y, w, y);
-}
-
-void renderGridLines(SDL_Renderer* renderer, float xoffset, float yoffset, float cellSize) {
-	int w_i = 0;
-	int h_i = 0;
-
-	SDL_GetCurrentRenderOutputSize(renderer, &w_i, &h_i);
-
-	float w = static_cast<float>(w_i);
-	float h = static_cast<float>(h_i);
-
-	xoffset = std::fmod(xoffset, cellSize);
-	yoffset = std::fmod(yoffset, cellSize);
-
-	float x = xoffset;
-	while (x <= w) {
-		renderVerticalLine(renderer, x, h);
-		x += cellSize;
-	}
-
-	float y = yoffset;
-	while (y <= h) {
-		renderHorizonalLine(renderer, y, w);
-		y += cellSize;
-	}
-}
-
-void renderText(SDL_Renderer* renderer, float x, float y, const std::string& str) {
-	SDL_RenderDebugText(renderer, x, y, str.c_str());
-}
-
-SDL_FPoint calcTextSize(const std::string& str, float textScale) {
-	return {
-		static_cast<float>(str.size() * SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) * textScale,
-		static_cast<float>(SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) * textScale
-	};
-}
-
-SDL_FRect offsetRect(const SDL_FRect& rect, float offsetX, float offsetY) {
-	return {
-		rect.x + offsetX,
-		rect.y + offsetY,
-		rect.w,
-		rect.h
-	};
-}
-
-SdlRenderPropertyStack::SdlRenderPropertyStack(SDL_Renderer* _renderer)
-: renderer { _renderer } {}
-
-void SdlRenderPropertyStack::push(const SdlRenderProperty& property) {
-	SdlRenderProperty pushedProperty;
-	pushedProperty.type = property.type;
-
-	switch (property.type) {
-	case SdlRenderPropertyType::DrawColor:
-		SDL_GetRenderDrawColor(
-			renderer,
-			&pushedProperty.colorValue.r,
-			&pushedProperty.colorValue.g,
-			&pushedProperty.colorValue.b,
-			&pushedProperty.colorValue.a
-		);
-		SDL_SetRenderDrawColor(
-			renderer,
-			property.colorValue.r,
-			property.colorValue.g,
-			property.colorValue.b,
-			property.colorValue.a
-		);
-		break;
-	case SdlRenderPropertyType::DrawBlendMode:
-		SDL_GetRenderDrawBlendMode(renderer, &pushedProperty.blendModeValue);
-		SDL_SetRenderDrawBlendMode(renderer, property.blendModeValue);
-		break;
-	case SdlRenderPropertyType::Scale:
-		SDL_GetRenderScale(
-			renderer,
-			&pushedProperty.fpointValue.x,
-			&pushedProperty.fpointValue.y
-		);
-		SDL_SetRenderScale(
-			renderer,
-			property.fpointValue.x,
-			property.fpointValue.y
-		);
-		break;
-	default:
-		break;
-	}
-
-	stack.push_back(pushedProperty);
-}
-
-void SdlRenderPropertyStack::pop() {
-	if (stack.size() == 0) return;
-
-	auto& property = stack.back();
-
-	switch (property.type) {
-	case SdlRenderPropertyType::DrawColor:
-		SDL_SetRenderDrawColor(
-			renderer,
-			property.colorValue.r,
-			property.colorValue.g,
-			property.colorValue.b,
-			property.colorValue.a
-		);
-		break;
-	case SdlRenderPropertyType::DrawBlendMode:
-		SDL_SetRenderDrawBlendMode(renderer, property.blendModeValue);
-		break;
-	case SdlRenderPropertyType::Scale:
-		SDL_SetRenderScale(
-			renderer,
-			property.fpointValue.x,
-			property.fpointValue.y
-		);
-		break;
-	default:
-		break;
-	}
-
-	stack.pop_back();
-}
-
-SdlRenderPropertyStack& getSdlRenderPropertyStack(SDL_Renderer* renderer) {
-	void* vptr = reinterpret_cast<void*>(renderer);
-
-	if (!__sdlPropStacks.contains(renderer)) {
-		__sdlPropStacks.emplace(vptr, renderer);
-	}
-
-	return __sdlPropStacks.at(vptr);
-}
-
-void pushSdlRenderProperty(SDL_Renderer* renderer, const SdlRenderProperty& property) {
-	getSdlRenderPropertyStack(renderer).push(property);
-}
-
-void popSdlRenderProperty(SDL_Renderer* renderer) {
-	getSdlRenderPropertyStack(renderer).pop();
-}
-
-void beginSdlTemporaryColor(SDL_Renderer* renderer, const Color& color) {
-	pushSdlRenderProperty(renderer, {
-		.type = SdlRenderPropertyType::DrawColor,
-		.colorValue = color
-	});
-
-	if (color.a < 255) {
-		pushSdlRenderProperty(renderer, {
-			.type = SdlRenderPropertyType::DrawBlendMode,
-			.blendModeValue = SDL_BLENDMODE_BLEND
-		});
-	}
-}
-
-void endSdlTemporaryColor(SDL_Renderer* renderer, const Color& color) {
-	popSdlRenderProperty(renderer);
-	if (color.a < 255) popSdlRenderProperty(renderer);
-}
-
 UiStylePropertyStack::UiStylePropertyStack(UiStyle* _style) : style { _style } {}
 
 void UiStylePropertyStack::push(const UiStyleProperty& property) {
@@ -258,12 +87,12 @@ void debugDrawData(
 	const UiDrawData& data,
 	bool showElements
 ) {
-	pushSdlRenderProperty(renderer, {
-		.type = SdlRenderPropertyType::DrawColor,
+	sdlutil::pushRenderProperty(renderer, {
+		.type = sdlutil::RenderPropertyType::DrawColor,
 		.colorValue = { 255, 0, 0, 255 }
 	});
 	debugDrawNode(renderer, 0.0f, 0.0f, data.root, showElements);
-	popSdlRenderProperty(renderer);
+	sdlutil::popRenderProperty(renderer);
 }
 
 void debugDrawNode(
@@ -273,20 +102,20 @@ void debugDrawNode(
 	const UiDrawNode& node,
 	bool showElements
 ) {
-	auto nodeRect = offsetRect(node.bounds, offsetX, offsetY);
+	auto nodeRect = sdlutil::offsetRect(node.bounds, offsetX, offsetY);
 	SDL_RenderRect(renderer, &nodeRect);
 
 	if (showElements) {
-		pushSdlRenderProperty(renderer, {
-			.type = SdlRenderPropertyType::DrawColor,
+		sdlutil::pushRenderProperty(renderer, {
+			.type = sdlutil::RenderPropertyType::DrawColor,
 			.colorValue = { 255, 255, 0, 255 }
 		});
 		SDL_FRect elemRect;
 		for (const auto& element : node.elements) {
-			elemRect = offsetRect(node.bounds, offsetX, offsetY);
+			elemRect = sdlutil::offsetRect(node.bounds, offsetX, offsetY);
 			SDL_RenderRect(renderer, &elemRect);
 		}
-		popSdlRenderProperty(renderer);
+		sdlutil::popRenderProperty(renderer);
 	}
 
 	for (const auto& child : node.children) {
@@ -357,15 +186,15 @@ void renderDrawRectangleData(
 	const UiDrawElement& element,
 	const UiDrawRectangleData& rectData
 ) {
-	auto tmpRect = offsetRect(element.bounds, offsetX, offsetY);
+	auto tmpRect = sdlutil::offsetRect(element.bounds, offsetX, offsetY);
 
-	beginSdlTemporaryColor(renderer, element.color);
+	sdlutil::beginTemporaryColor(renderer, element.color);
 	if (rectData.fill) {
 		SDL_RenderFillRect(renderer, &tmpRect);
 	} else {
 		SDL_RenderRect(renderer, &tmpRect);
 	}
-	endSdlTemporaryColor(renderer, element.color);
+	sdlutil::endTemporaryColor(renderer, element.color);
 }
 
 void renderDrawTextData(
@@ -375,19 +204,19 @@ void renderDrawTextData(
 	const UiDrawElement& element,
 	const UiDrawTextData& textData
 ) {
-	beginSdlTemporaryColor(renderer, element.color);
-	pushSdlRenderProperty(renderer, {
-		.type = SdlRenderPropertyType::Scale,
+	sdlutil::beginTemporaryColor(renderer, element.color);
+	sdlutil::pushRenderProperty(renderer, {
+		.type = sdlutil::RenderPropertyType::Scale,
 		.fpointValue = {textData.scale, textData.scale}
 	});
-	renderText(
+	sdlutil::renderText(
 		renderer,
 		(offsetX + element.bounds.x)/textData.scale,
 		(offsetY + element.bounds.y)/textData.scale,
 		textData.text
 	);
-	popSdlRenderProperty(renderer);
-	endSdlTemporaryColor(renderer, element.color);
+	sdlutil::popRenderProperty(renderer);
+	sdlutil::endTemporaryColor(renderer, element.color);
 }
 
 void Ui::beginFrame() {
@@ -518,7 +347,7 @@ SDL_FPoint Ui::calcRenderLocation(float w, float h) {
 }
 
 void Ui::text(const std::string& str) {
-	auto [w, h] = calcTextSize(str, style.textScale);
+	auto [w, h] = sdlutil::calcTextSize(str, style.textScale);
 	SDL_FPoint nodeSize {
 		w + 2*style.textPadding,
 		h + 2*style.textPadding
@@ -622,8 +451,8 @@ void WorldWindow::renderGrid(SDL_Renderer* renderer) {
 		gridAlpha *= (cellSize - minCellSize) / (gridFadeStart - minCellSize);
 	}
 
-	pushSdlRenderProperty(renderer, {
-		.type = SdlRenderPropertyType::DrawBlendMode,
+	sdlutil::pushRenderProperty(renderer, {
+		.type = sdlutil::RenderPropertyType::DrawBlendMode,
 		.blendModeValue = SDL_BLENDMODE_BLEND
 	});
 
@@ -632,9 +461,9 @@ void WorldWindow::renderGrid(SDL_Renderer* renderer) {
 		50, 50, 50,
 		static_cast<uint8_t>(gridAlpha)
 	);
-	renderGridLines(renderer, xoffset, yoffset, cellSize);
+	sdlutil::renderGridLines(renderer, xoffset, yoffset, cellSize);
 
-	popSdlRenderProperty(renderer);
+	sdlutil::popRenderProperty(renderer);
 }
 
 void WorldWindow::renderBorder(SDL_Renderer* renderer, size_t worldWidth, size_t worldHeight) {

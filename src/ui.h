@@ -4,81 +4,14 @@
 #include <SDL3/SDL.h>
 
 #include "life.h"
+#include "sdlutil.h"
+
+using sdlutil::Color;
+using sdlutil::ElementAlignment;
+using sdlutil::HorizontalAlignment;
+using sdlutil::VerticalAlignment;
 
 namespace ui {
-void renderVerticalLine(SDL_Renderer* renderer, float x, float h);
-void renderHorizonalLine(SDL_Renderer* renderer, float y, float w);
-void renderGridLines(SDL_Renderer* renderer, float xoffset, float yoffset, float cellSize);
-
-// Will eventually replace this with better text rendering, just abstracting
-// the debug text for now.
-void renderText(SDL_Renderer* renderer, float x, float y, const std::string& str);
-
-// Returns width in x, height in y.
-SDL_FPoint calcTextSize(const std::string& str, float textScale=1.0f);
-
-SDL_FRect offsetRect(const SDL_FRect& rect, float offsetX, float offsetY);
-
-struct Color {
-	uint8_t r;
-	uint8_t g;
-	uint8_t b;
-	uint8_t a;
-};
-
-enum class HorizontalAlignment {
-	left,
-	right
-};
-
-enum class VerticalAlignment {
-	top,
-	bottom
-};
-
-struct ElementAlignment {
-	HorizontalAlignment h;
-	VerticalAlignment v;
-};
-
-template<typename T>
-struct RenderProperty {
-	T type;
-	union {
-		Color colorValue;
-		SDL_BlendMode blendModeValue;
-		SDL_FPoint fpointValue;
-		float floatValue;
-		ElementAlignment alignmentValue;
-	};
-};
-
-enum class SdlRenderPropertyType {
-	DrawColor,
-	DrawBlendMode,
-	Scale
-};
-
-using SdlRenderProperty = RenderProperty<SdlRenderPropertyType>;
-
-struct SdlRenderPropertyStack {
-	SDL_Renderer* renderer;
-	std::vector<SdlRenderProperty> stack;
-
-	SdlRenderPropertyStack(SDL_Renderer* _renderer);
-
-	void push(const SdlRenderProperty& property);
-	void pop();
-};
-
-SdlRenderPropertyStack& getSdlRenderPropertyStack(SDL_Renderer* renderer);
-void pushSdlRenderProperty(SDL_Renderer* renderer, const SdlRenderProperty& property);
-void popSdlRenderProperty(SDL_Renderer* renderer);
-
-// Utility functions that handle proper juggling of colors with alpha
-void beginSdlTemporaryColor(SDL_Renderer* renderer, const Color& color);
-void endSdlTemporaryColor(SDL_Renderer* renderer, const Color& color);
-
 struct UiStyle {
 	SDL_FPoint regionPadding { 2.0f, 2.0f };
 
@@ -101,7 +34,7 @@ enum class UiStylePropertyType {
 	Alignment
 };
 
-using UiStyleProperty = RenderProperty<UiStylePropertyType>;
+using UiStyleProperty = sdlutil::GenericProperty<UiStylePropertyType>;
 
 struct UiStylePropertyStack {
 	UiStyle* style;

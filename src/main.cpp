@@ -6,6 +6,10 @@
 
 #include "ui.h"
 #include "life.h"
+#include "sdlutil.h"
+
+using sdlutil::HorizontalAlignment;
+using sdlutil::VerticalAlignment;
 
 static constexpr size_t WINDOW_WIDTH = 800;
 static constexpr size_t WINDOW_HEIGHT = WINDOW_WIDTH;
@@ -185,8 +189,8 @@ void renderUi(AppState& state) {
 	});
 
 	uiState.style.alignment = {
-		ui::HorizontalAlignment::left,
-		ui::VerticalAlignment::top
+		HorizontalAlignment::left,
+		VerticalAlignment::top
 	};
 	uiState.resetCursor();
 
@@ -206,8 +210,8 @@ void renderUi(AppState& state) {
 	);
 
 	uiState.style.alignment = {
-		ui::HorizontalAlignment::right,
-		ui::VerticalAlignment::bottom
+		HorizontalAlignment::right,
+		VerticalAlignment::bottom
 	};
 	uiState.resetCursor();
 

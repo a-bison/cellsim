@@ -14,6 +14,7 @@ add_executable(main "src/main.cpp")
 set_target_properties(main PROPERTIES OUTPUT_NAME "cellsim")
 
 target_sources(main PRIVATE "src/life.cpp")
+target_sources(main PRIVATE "src/sdlutil.cpp")
 target_sources(main PRIVATE "src/ui.cpp")
 
 target_include_directories(main PRIVATE "src")
