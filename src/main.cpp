@@ -17,23 +17,7 @@ static constexpr size_t WORLD_WIDTH = 400;
 static constexpr size_t WORLD_HEIGHT = WORLD_WIDTH;
 static constexpr float CELLSIZE = WINDOW_WIDTH / WORLD_WIDTH;
 
-const life::Point GLIDER[] {
-	{ 1, 0 },
-	{ 2, 1 },
-	{ 0, 2 },
-	{ 1, 2 },
-	{ 2, 2 }
-};
-
-// Standard life rule
-static const unsigned int LIFE_BORN[] { 3 };
-static const unsigned int LIFE_SURVIVE[] { 2, 3 };
-
-// Complimentary life rule
-/*
-static const unsigned int LIFE_BORN[] { 0, 1, 2, 3, 4, 7, 8 };
-static const unsigned int LIFE_SURVIVE[] { 0, 1, 2, 3, 4, 6, 7, 8 };
-*/
+static const std::string LIFE_STANDARD_RULE { "B3/S23" };
 
 struct LifeState {
 	unsigned int tickms = 100;
@@ -96,8 +80,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 
 	SDL_SetRenderVSync(__state.renderer, 1);
 
-	__state.world.rule.setBorn(LIFE_BORN);
-	__state.world.rule.setSurvive(LIFE_SURVIVE);
+	__state.world.rule.setString(LIFE_STANDARD_RULE);
 
 	__state.world.backBuffer().randomize();
 	__state.world.swap();
