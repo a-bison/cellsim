@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <set>
 #include <span>
+#include <string>
 
 namespace life {
 using signed_size_t = std::make_signed_t<size_t>;
@@ -58,6 +59,7 @@ struct LifeRule {
 	// Utility methods to set rule in a more comprehensible way
 	void setBorn(std::span<const unsigned int> _born);
 	void setSurvive(std::span<const unsigned int> _survive);
+	bool setString(const std::string& ruleString);
 
 	// Given previous cell state and number of live neighbors, returns whether the
 	// cell should be alive or dead next tick

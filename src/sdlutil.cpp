@@ -50,13 +50,18 @@ SDL_FPoint calcTextSize(const std::string& str, float textScale) {
 	};
 }
 
-SDL_FRect offsetRect(const SDL_FRect& rect, float offsetX, float offsetY) {
+SDL_FRect translatedRect(const SDL_FRect& rect, float offsetX, float offsetY) {
 	return {
 		rect.x + offsetX,
 		rect.y + offsetY,
 		rect.w,
 		rect.h
 	};
+}
+
+void translateRect(SDL_FRect& rect, float offsetX, float offsetY) {
+	rect.x += offsetX;
+	rect.y += offsetY;
 }
 
 SDL_FRect deoffsetRect(const SDL_FRect& rect) {

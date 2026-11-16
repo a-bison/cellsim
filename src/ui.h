@@ -13,16 +13,24 @@ using sdlutil::VerticalAlignment;
 
 namespace ui {
 struct UiStyle {
-	SDL_FPoint regionPadding { 2.0f, 2.0f };
+	SDL_FPoint regionPadding { 0.0f, 0.0f };
 
 	float textScale = 2.0f;
-	float textPadding = 2.0f;
+	float textPadding = 3.0f;
 	Color textColor { 255, 255, 255, 255 };
 	Color textBackground { 0, 0, 0, 0 };
 	ElementAlignment alignment {
 		HorizontalAlignment::left,
 		VerticalAlignment::top
 	};
+
+	float textBoxPadding = 3.0f;
+	Color textBoxBackground { 50, 50, 50, 255 };
+	Color textBoxBorder { 255, 255, 255, 255 };
+
+	Color modalOverlayColor { 0, 0, 0, 150 };
+	Color modalBorderColor { 255, 255, 255, 255 };
+	Color modalBackgroundColor { 0, 0, 0, 255 };
 };
 
 enum class UiStylePropertyType {
@@ -62,6 +70,10 @@ struct UiDrawNode {
 	SDL_FRect bounds;
 	std::vector<UiDrawNode> children;
 	std::vector<UiDrawElement> elements;
+
+	// Calculates a rectangle that contains all of the child nodes of this
+	// node. It is expected that each child property defines its bounds.
+	SDL_FRect autoFit();
 };
 
 struct UiDrawRectangleData {
@@ -122,8 +134,7 @@ void renderDrawTextData(
 	const UiDrawTextData& textData
 );
 
-struct Ui {
-	SDL_Renderer* renderer;
+struct UiBuilder {
 	UiStyle style;
 	UiStylePropertyStack styleStack { &style };
 
@@ -133,11 +144,11 @@ struct Ui {
 	SDL_FPoint cursor;
 	std::vector<SDL_FPoint> cursorStack;
 
-	Ui() = default;
-	Ui(const Ui&) = delete;
-	Ui(Ui&&) = delete;
+	UiBuilder() = default;
+	UiBuilder(const UiBuilder&) = delete;
+	UiBuilder(UiBuilder&&) = delete;
 
-	void beginFrame();
+	void beginFrame(SDL_Renderer* renderer);
 
 	UiDrawNode& currentNode();
 	void beginNode(float w, float h);
@@ -165,6 +176,11 @@ struct Ui {
 
 	template<typename... Args>
 	void textFormat(std::format_string<Args...> fmt, Args&&... args);
+
+	void textBox(const std::string& str, float overrideWidth=-1.0f);
+
+	void beginModal();
+	void endModal();
 };
 
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h);

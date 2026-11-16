@@ -73,6 +73,29 @@ void UiStylePropertyStack::pop() {
 	stack.pop_back();
 }
 
+SDL_FRect UiDrawNode::autoFit() {
+	std::vector<SDL_FPoint> points;
+
+	for (const auto& child : children) {
+		points.push_back({child.bounds.x, child.bounds.y});
+		points.push_back({
+			child.bounds.x + child.bounds.w,
+			child.bounds.y + child.bounds.h
+		});
+	}
+
+	SDL_FRect result;
+
+	SDL_GetRectEnclosingPointsFloat(
+		points.data(),
+		points.size(),
+		NULL,
+		&result
+	);
+
+	return result;
+}
+
 void UiDrawData::reset(const SDL_FRect& bounds) {
 	rectData.clear();
 	textData.clear();
@@ -102,7 +125,7 @@ void debugDrawNode(
 	const UiDrawNode& node,
 	bool showElements
 ) {
-	auto nodeRect = sdlutil::offsetRect(node.bounds, offsetX, offsetY);
+	auto nodeRect = sdlutil::translatedRect(node.bounds, offsetX, offsetY);
 	SDL_RenderRect(renderer, &nodeRect);
 
 	if (showElements) {
@@ -112,7 +135,7 @@ void debugDrawNode(
 		});
 		SDL_FRect elemRect;
 		for (const auto& element : node.elements) {
-			elemRect = sdlutil::offsetRect(node.bounds, offsetX, offsetY);
+			elemRect = sdlutil::translatedRect(node.bounds, offsetX, offsetY);
 			SDL_RenderRect(renderer, &elemRect);
 		}
 		sdlutil::popRenderProperty(renderer);
@@ -186,7 +209,7 @@ void renderDrawRectangleData(
 	const UiDrawElement& element,
 	const UiDrawRectangleData& rectData
 ) {
-	auto tmpRect = sdlutil::offsetRect(element.bounds, offsetX, offsetY);
+	auto tmpRect = sdlutil::translatedRect(element.bounds, offsetX, offsetY);
 
 	sdlutil::beginTemporaryColor(renderer, element.color);
 	if (rectData.fill) {
@@ -219,7 +242,7 @@ void renderDrawTextData(
 	sdlutil::endTemporaryColor(renderer, element.color);
 }
 
-void Ui::beginFrame() {
+void UiBuilder::beginFrame(SDL_Renderer* renderer) {
 	nodeStack.clear();
 
 	int w;
@@ -237,11 +260,11 @@ void Ui::beginFrame() {
 	nodeStack.push_back(&drawData.root);
 }
 
-UiDrawNode& Ui::currentNode() {
+UiDrawNode& UiBuilder::currentNode() {
 	return *nodeStack.back();
 }
 
-void Ui::beginNode(float w, float h) {
+void UiBuilder::beginNode(float w, float h) {
 	currentNode().children.push_back({});
 	auto& newNode = currentNode().children.back();
 
@@ -255,11 +278,11 @@ void Ui::beginNode(float w, float h) {
 	nodeStack.push_back(&newNode);
 }
 
-void Ui::endNode() {
+void UiBuilder::endNode() {
 	nodeStack.pop_back();
 }
 
-void Ui::emitRectangle(
+void UiBuilder::emitRectangle(
 	const SDL_FRect& bounds,
 	const Color& color,
 	bool fill
@@ -275,7 +298,7 @@ void Ui::emitRectangle(
 	});
 }
 
-void Ui::emitText(
+void UiBuilder::emitText(
 	const SDL_FRect& bounds,
 	const Color& color,
 	float textScale,
@@ -292,16 +315,16 @@ void Ui::emitText(
 	});
 }
 
-void Ui::pushCursor() {
+void UiBuilder::pushCursor() {
 	cursorStack.push_back(cursor);
 }
 
-void Ui::popCursor() {
+void UiBuilder::popCursor() {
 	cursor = cursorStack.back();
 	cursorStack.pop_back();
 }
 
-void Ui::resetCursorInBounds(const SDL_FRect& bounds) {
+void UiBuilder::resetCursorInBounds(const SDL_FRect& bounds) {
 	switch (style.alignment.h) {
 	case HorizontalAlignment::left:
 		cursor.x = bounds.x;
@@ -331,11 +354,11 @@ void Ui::resetCursorInBounds(const SDL_FRect& bounds) {
 	}
 }
 
-void Ui::resetCursor() {
+void UiBuilder::resetCursor() {
 	resetCursorInBounds(sdlutil::deoffsetRect(currentNode().bounds));
 }
 
-void Ui::advanceCursor(float w, float h) {
+void UiBuilder::advanceCursor(float w, float h) {
 	// For now, only advancing down is supported. Because of this,
 	// VerticalAlignment::center is a little tricky. For now, it's only
 	// possible by grouping everything together in a node and doing it
@@ -347,7 +370,7 @@ void Ui::advanceCursor(float w, float h) {
 	}
 }
 
-SDL_FPoint Ui::calcRenderLocation(float w, float h) {
+SDL_FPoint UiBuilder::calcRenderLocation(float w, float h) {
 	SDL_FPoint pt;
 
 	switch (style.alignment.h) {
@@ -385,7 +408,7 @@ SDL_FPoint Ui::calcRenderLocation(float w, float h) {
 	return pt;
 }
 
-void Ui::text(const std::string& str) {
+void UiBuilder::text(const std::string& str) {
 	auto [w, h] = sdlutil::calcTextSize(str, style.textScale);
 	SDL_FPoint nodeSize {
 		w + 2*style.textPadding,
@@ -410,6 +433,93 @@ void Ui::text(const std::string& str) {
 	endNode();
 
 	advanceCursor(nodeSize.x, nodeSize.y);
+}
+
+void UiBuilder::textBox(const std::string& str, float overrideWidth) {
+	auto [w, h] = sdlutil::calcTextSize(str, style.textScale);
+
+	float boxWidth = w;
+	if (overrideWidth > 0) {
+		boxWidth = overrideWidth;
+	}
+
+	SDL_FPoint nodeSize {
+		boxWidth + 2*style.textPadding + 2*style.textBoxPadding,
+		h + 2*style.textPadding + 2*style.textBoxPadding,
+	};
+
+	beginNode(nodeSize.x, nodeSize.y);
+
+	SDL_FRect boxBounds {
+		style.textBoxPadding,
+		style.textBoxPadding,
+		boxWidth + 2*style.textPadding,
+		h + 2*style.textPadding
+	};
+	emitRectangle(boxBounds, style.textBoxBackground, true);
+	emitRectangle(boxBounds, style.textBoxBorder, false);
+
+	SDL_FRect textBounds {
+		style.textBoxPadding + style.textPadding,
+		style.textBoxPadding + style.textPadding,
+		w,
+		h
+	};
+	emitText(textBounds, style.textColor, style.textScale, str);
+
+	endNode();
+
+	advanceCursor(nodeSize.x, nodeSize.y);
+}
+
+void UiBuilder::beginModal() {
+	const auto& b = currentNode().bounds;
+
+	resetCursor();
+
+	// Emit a rectangle that covers the entire containing node
+	// must be a node to ensure it gets rendered last. The beginModal()
+	// call should be the last call in whatever the enclosing node is.
+	beginNode(b.w, b.h);
+	emitRectangle(sdlutil::deoffsetRect(b), style.modalOverlayColor, true);
+	endNode();
+
+	beginNode(0, 0);
+	// Frame rects. Must be corrected once interior of modal is done.
+	emitRectangle({ 0, 0, 0, 0 }, style.modalBackgroundColor, true);
+	emitRectangle({ 0, 0, 0, 0 }, style.modalBorderColor, false);
+}
+
+void UiBuilder::endModal() {
+	auto& node = currentNode();
+
+	// Correct size of node and location of children
+	auto autofit = node.autoFit();
+
+	node.bounds = sdlutil::deoffsetRect(autofit);
+	node.elements[0].bounds = node.bounds;
+	node.elements[1].bounds = node.bounds;
+
+	for (auto& child : node.children) {
+		child.bounds.x -= autofit.x;
+		child.bounds.y -= autofit.y;
+	}
+
+	endNode();
+
+	// Move modal node so it's properly in the center of the parent node.
+	styleStack.push({
+		.type = UiStylePropertyType::Alignment,
+		.alignmentValue = {
+			HorizontalAlignment::center,
+			VerticalAlignment::center
+		}
+	});
+	resetCursor();
+	auto loc = calcRenderLocation(node.bounds.w, node.bounds.h);
+	node.bounds.x = loc.x;
+	node.bounds.y = loc.y;
+	styleStack.pop();
 }
 
 bool shouldRenderCellRect(SDL_FRect& rect, int w, int h) {

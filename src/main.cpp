@@ -51,10 +51,18 @@ enum UiDebugMode {
 	UI_DEBUG_MODE_COUNT
 };
 
+struct UiState {
+	bool ruleStringModal = false;
+	unsigned int ruleStringCharLimit = 25;
+	std::string ruleStringBuffer;
+	std::string ruleStringError;
+};
+
 struct AppState {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
-	ui::Ui uiState;
+	ui::UiBuilder uiBuilder;
+	UiState uiState;
 	UiDebugMode uiDebug = UI_DEBUG_NONE;
 
 	uint64_t lastTime = 0;
@@ -88,8 +96,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 
 	SDL_SetRenderVSync(__state.renderer, 1);
 
-	__state.uiState.renderer = __state.renderer;
-
 	__state.world.rule.setBorn(LIFE_BORN);
 	__state.world.rule.setSurvive(LIFE_SURVIVE);
 
@@ -121,6 +127,12 @@ SDL_AppResult handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
 		state.world.backBuffer().clear();
 		state.world.swap();
 		break;
+	case SDLK_S:
+		state.uiState.ruleStringModal = true;
+		state.uiState.ruleStringBuffer.clear();
+		state.uiState.ruleStringError.clear();
+		SDL_StartTextInput(state.window);
+		break;
 	case SDLK_UP:
 		state.lifeState.tickms -= 10;
 		if (state.lifeState.tickms < 10) state.lifeState.tickms = 10;
@@ -144,12 +156,8 @@ void handleMouseWheel(AppState& state, SDL_MouseWheelEvent& event) {
 	state.worldWindow.zoom(event.mouse_x, event.mouse_y, event.y);
 }
 
-SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
-	auto& state = *reinterpret_cast<AppState*>(appstate);
-
+SDL_AppResult handleNonTextInput(AppState& state, SDL_Event *event) {
 	switch (event->type) {
-	case SDL_EVENT_QUIT:
-		return SDL_APP_SUCCESS;
 	case SDL_EVENT_KEY_DOWN:
 		return handleKeyDown(state, event->key);
 	case SDL_EVENT_MOUSE_WHEEL:
@@ -157,6 +165,75 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
 		break;
 	default:
 		break;
+	}
+
+	return SDL_APP_CONTINUE;
+}
+
+void handleTextInput(AppState& state, SDL_Event *event) {
+	auto& uiState = state.uiState;
+
+	switch (event->type) {
+	case SDL_EVENT_KEY_DOWN:
+		if (event->key.key == SDLK_ESCAPE) {
+			uiState.ruleStringModal = false;
+			SDL_StopTextInput(state.window);
+		} else if (event->key.key == SDLK_BACKSPACE) {
+
+			if (uiState.ruleStringBuffer.size() > 0) {
+				uiState.ruleStringBuffer.pop_back();
+			}
+		} else if (event->key.key == SDLK_RETURN) {
+			if (state.world.rule.setString(uiState.ruleStringBuffer)) {
+				uiState.ruleStringModal = false;
+				SDL_StopTextInput(state.window);
+			} else {
+				uiState.ruleStringError = "Invalid rulestring.";
+			}
+		} else if (event->key.key == SDLK_V) {
+			char* pasted = SDL_GetClipboardText();
+			char* cursor = pasted;
+
+			while (*cursor) {
+				if (uiState.ruleStringBuffer.size() < uiState.ruleStringCharLimit) {
+					uiState.ruleStringBuffer.push_back(*cursor);
+				} else {
+					break;
+				}
+				cursor++;
+			}
+
+			SDL_free(pasted);
+		}
+		break;
+	case SDL_EVENT_TEXT_INPUT:
+		{
+			uiState.ruleStringError.clear();
+			const char* ptr = event->text.text;
+			while (*ptr) {
+				if (uiState.ruleStringBuffer.size() < uiState.ruleStringCharLimit) {
+					uiState.ruleStringBuffer.push_back(*ptr);
+				}
+				ptr++;
+			}
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
+	auto& state = *reinterpret_cast<AppState*>(appstate);
+
+	if (event->type == SDL_EVENT_QUIT) {
+		return SDL_APP_SUCCESS;
+	}
+
+	if (SDL_TextInputActive(state.window)) {
+		handleTextInput(state, event);
+	} else {
+		return handleNonTextInput(state, event);
 	}
 
 	return SDL_APP_CONTINUE;
@@ -179,71 +256,96 @@ void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t cu
 }
 
 void renderUi(AppState& state) {
+	auto& uiBuilder = state.uiBuilder;
 	auto& uiState = state.uiState;
 
-	uiState.beginFrame();
+	uiBuilder.beginFrame(state.renderer);
 
-	uiState.styleStack.push({
+	uiBuilder.styleStack.push({
 		.type = ui::UiStylePropertyType::TextBackground,
 		.colorValue = { 0, 0, 0, 130 }
 	});
 
-	uiState.style.alignment = {
+	uiBuilder.style.alignment = {
 		HorizontalAlignment::left,
 		VerticalAlignment::top
 	};
-	uiState.resetCursor();
+	uiBuilder.resetCursor();
 
 	// FPS counter
-	uiState.textFormat(
+	uiBuilder.textFormat(
 		"{:.2f} FPS ({:.2f} ms)",
 		1000.0f / state.averageFrameTime,
 		state.averageFrameTime
 	);
 
 	// TPS counter
-	uiState.textFormat(
+	uiBuilder.textFormat(
 		"{:.2f} TPS ({:.2f}/{} ms)",
 		1000.0f / state.lifeState.averageTickTime,
 		state.lifeState.averageTickTime,
 		state.lifeState.tickms
 	);
 
-	uiState.style.alignment = {
+	uiBuilder.style.alignment = {
 		HorizontalAlignment::right,
 		VerticalAlignment::bottom
 	};
-	uiState.resetCursor();
+	uiBuilder.resetCursor();
 
 	// Life grid position
 	float mouseX;
 	float mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
 	auto pt = state.worldWindow.lifeSPointFromScreenPoint(mouseX, mouseY);
-	uiState.textFormat("({},{})", pt.x, pt.y);
+	uiBuilder.textFormat("({},{})", pt.x, pt.y);
 
 	// Zoom
-	uiState.textFormat("Z{:.2f}", state.worldWindow.cellSize);
+	uiBuilder.textFormat("Z{:.2f}", state.worldWindow.cellSize);
 
-	uiState.style.alignment = {
+	uiBuilder.style.alignment = {
 		HorizontalAlignment::center,
 		VerticalAlignment::bottom
 	};
-	uiState.resetCursor();
+	uiBuilder.resetCursor();
 
 	if (state.lifeState.paused) {
-		uiState.text("PAUSED");
+		uiBuilder.text("PAUSED");
 	}
 
-	uiState.styleStack.pop();
+	uiBuilder.styleStack.pop();
 
-	ui::renderDrawData(state.renderer, uiState.drawData);
+	if (uiState.ruleStringModal) {
+		uiBuilder.beginModal();
+		uiBuilder.style.alignment = {
+			HorizontalAlignment::center,
+			VerticalAlignment::top
+		};
+		uiBuilder.resetCursor();
+
+		uiBuilder.text("Enter Rulestring");
+		uiBuilder.textBox(uiState.ruleStringBuffer, 400);
+		if (uiState.ruleStringError.size() == 0) {
+			uiBuilder.text(" ");
+		} else {
+			uiBuilder.styleStack.push({
+				.type = ui::UiStylePropertyType::TextColor,
+				.colorValue = { 255, 0, 0, 255 }
+			});
+			uiBuilder.text(uiState.ruleStringError);
+			uiBuilder.styleStack.pop();
+		}
+
+		uiBuilder.endModal();
+	}
+
+	ui::renderDrawData(state.renderer, uiBuilder.drawData);
 
 	if (state.uiDebug > UI_DEBUG_NONE) {
 		bool showElements = state.uiDebug == UI_DEBUG_ALL;
 		ui::debugDrawData(
 			state.renderer,
-			uiState.drawData,
+			uiBuilder.drawData,
 			showElements
 		);
 	}
@@ -281,7 +383,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 	state.averageFrameTime = rollingAverage(state.averageFrameTime, frameDelta);
 
 	// Do state updates
-	processMouse(state);
+	if (!SDL_TextInputActive(state.window)) {
+		processMouse(state);
+	}
 	processLifeTick(state.world, state.lifeState, currentTime);
 
 	// Render

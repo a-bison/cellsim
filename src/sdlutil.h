@@ -16,8 +16,11 @@ void renderText(SDL_Renderer* renderer, float x, float y, const std::string& str
 // Returns width in x, height in y.
 SDL_FPoint calcTextSize(const std::string& str, float textScale=1.0f);
 
-// Translates a rectangle.
-SDL_FRect offsetRect(const SDL_FRect& rect, float offsetX, float offsetY);
+// Translates a rectangle, returning a copy
+SDL_FRect translatedRect(const SDL_FRect& rect, float offsetX, float offsetY);
+
+// Translates a rectangle in place.
+void translateRect(SDL_FRect& rect, float offsetX, float offsetY);
 
 // Zeros out the x,y coordinates of a rectangle.
 SDL_FRect deoffsetRect(const SDL_FRect& rect);

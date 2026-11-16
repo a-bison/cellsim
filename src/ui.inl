@@ -1,6 +1,6 @@
 namespace ui {
 template<typename... Args>
-void Ui::textFormat(std::format_string<Args...> fmt, Args&&... args) {
+void UiBuilder::textFormat(std::format_string<Args...> fmt, Args&&... args) {
 	auto s = std::format(fmt, std::forward<Args>(args)...);
 	text(s);
 }
