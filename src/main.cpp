@@ -90,8 +90,8 @@ SDL_AppResult LifeControlMode::handleKeyDown(AppState& state, SDL_KeyboardEvent&
 		state.lifeState.tickms += 10;
 		break;
 	case SDLK_F1:
-		state.uiDebug = static_cast<UiDebugMode>(
-			(state.uiDebug + 1) % UI_DEBUG_MODE_COUNT
+		state.uiState.debugMode = static_cast<UiDebugMode>(
+			(state.uiState.debugMode + 1) % UI_DEBUG_MODE_COUNT
 		);
 		break;
 	default:
@@ -370,8 +370,8 @@ void renderUi(AppState& state) {
 
 	ui::renderDrawData(state.renderer, uiBuilder.drawData);
 
-	if (state.uiDebug > UI_DEBUG_NONE) {
-		bool showElements = state.uiDebug == UI_DEBUG_ALL;
+	if (state.uiState.debugMode > UI_DEBUG_NONE) {
+		bool showElements = state.uiState.debugMode == UI_DEBUG_ALL;
 		ui::debugDrawData(
 			state.renderer,
 			uiBuilder.drawData,

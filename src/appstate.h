@@ -57,6 +57,7 @@ struct RuleStringModal {
 
 struct UiState {
 	RuleStringModal ruleStringModal;
+	UiDebugMode debugMode = UI_DEBUG_NONE;
 };
 
 class LifeControlMode : public AppMode {
@@ -104,7 +105,6 @@ struct AppState {
 	SDL_Renderer* renderer;
 	ui::UiBuilder uiBuilder;
 	UiState uiState;
-	UiDebugMode uiDebug = UI_DEBUG_NONE;
 
 	uint64_t lastTime = 0;
 	float averageFrameTime = 0.0f;
