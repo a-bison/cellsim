@@ -1,61 +1,251 @@
 #include <ctime>
 
 #define SDL_MAIN_USE_CALLBACKS 1
-#include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-#include "ui.h"
-#include "life.h"
-#include "sdlutil.h"
-
-using sdlutil::HorizontalAlignment;
-using sdlutil::VerticalAlignment;
-
-static constexpr size_t WINDOW_WIDTH = 800;
-static constexpr size_t WINDOW_HEIGHT = WINDOW_WIDTH;
-static constexpr size_t WORLD_WIDTH = 400;
-static constexpr size_t WORLD_HEIGHT = WORLD_WIDTH;
-static constexpr float CELLSIZE = WINDOW_WIDTH / WORLD_WIDTH;
+#include "appstate.h"
 
 static const std::string LIFE_STANDARD_RULE { "B3/S23" };
 
-struct LifeState {
-	unsigned int tickms = 100;
-	uint64_t lastTickTime = 0;
-	float averageTickTime = 0.0f;
-	bool paused = false;
-};
+void RuleStringModal::renderModal(ui::UiBuilder& uiBuilder, const std::string& buffer) {
+	uiBuilder.beginModal();
+	uiBuilder.style.alignment = {
+		HorizontalAlignment::center,
+		VerticalAlignment::top
+	};
+	uiBuilder.resetCursor();
 
-// Deliberately using non-class enum here for more convenient cycling debug
-// toggle
-enum UiDebugMode {
-	UI_DEBUG_NONE = 0,
-	UI_DEBUG_NODES,
-	UI_DEBUG_ALL,
-	UI_DEBUG_MODE_COUNT
-};
+	uiBuilder.text("Enter Rulestring");
+	uiBuilder.textBox(buffer, 400);
+	if (!showError) {
+		uiBuilder.text(" ");
+	} else {
+		uiBuilder.styleStack.push({
+			.type = ui::UiStylePropertyType::TextColor,
+			.colorValue = { 255, 0, 0, 255 }
+		});
+		uiBuilder.text("Invalid rulestring.");
+		uiBuilder.styleStack.pop();
+	}
 
-struct UiState {
-	bool ruleStringModal = false;
-	unsigned int ruleStringCharLimit = 25;
-	std::string ruleStringBuffer;
-	std::string ruleStringError;
-};
+	uiBuilder.endModal();
+}
 
-struct AppState {
-	SDL_Window* window;
-	SDL_Renderer* renderer;
-	ui::UiBuilder uiBuilder;
-	UiState uiState;
-	UiDebugMode uiDebug = UI_DEBUG_NONE;
+void RuleStringModal::show(AppState& state) {
+	// Currently this modal is the only UI element that uses text
+	// input
+	if (state.currentMode->getId() != TextInputMode::id) return;
 
-	uint64_t lastTime = 0;
-	float averageFrameTime = 0.0f;
+	auto& input = state.textInputMode;
 
-	life::World<WORLD_WIDTH, WORLD_HEIGHT> world;
-	ui::WorldWindow worldWindow;
-	LifeState lifeState;
-};
+	if (input.textChanged) showError = false;
+
+	renderModal(state.uiBuilder, state.textInputMode.inputBuffer);
+
+	if (input.enterPressed) {
+		bool success = state.world.rule.setString(input.inputBuffer);
+		if (!success) {
+			showError = true;
+		} else {
+			state.setMode(LifeControlMode::id);
+		}
+	}
+}
+
+void RuleStringModal::open(AppState& state) {
+	state.setMode(TextInputMode::id);
+	showError = false;
+}
+
+SDL_AppResult LifeControlMode::handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
+	switch (event.key) {
+	case SDLK_ESCAPE:
+		return SDL_APP_SUCCESS;
+	case SDLK_SPACE:
+		state.lifeState.paused = !state.lifeState.paused;
+		state.lifeState.lastTickTime = SDL_GetTicks();
+		break;
+	case SDLK_E:
+		if (state.lifeState.paused) {
+			state.world.tick();
+			state.world.swap();
+		}
+		break;
+	case SDLK_R:
+		state.world.backBuffer().randomize();
+		state.world.swap();
+		break;
+	case SDLK_C:
+		state.world.backBuffer().clear();
+		state.world.swap();
+		break;
+	case SDLK_S:
+		state.uiState.ruleStringModal.open(state);
+		break;
+	case SDLK_UP:
+		state.lifeState.tickms -= 10;
+		if (state.lifeState.tickms < 10) state.lifeState.tickms = 10;
+		break;
+	case SDLK_DOWN:
+		state.lifeState.tickms += 10;
+		break;
+	case SDLK_F1:
+		state.uiDebug = static_cast<UiDebugMode>(
+			(state.uiDebug + 1) % UI_DEBUG_MODE_COUNT
+		);
+		break;
+	default:
+		break;
+	}
+
+	return SDL_APP_CONTINUE;
+}
+
+void LifeControlMode::handleMouseWheel(AppState& state, SDL_MouseWheelEvent& event) {
+	state.worldWindow.zoom(event.mouse_x, event.mouse_y, event.y);
+}
+
+SDL_AppResult LifeControlMode::onEvent(AppState& state, SDL_Event *event) {
+	switch (event->type) {
+	case SDL_EVENT_KEY_DOWN:
+		return handleKeyDown(state, event->key);
+	case SDL_EVENT_MOUSE_WHEEL:
+		handleMouseWheel(state, event->wheel);
+		break;
+	default:
+		break;
+	}
+
+	return SDL_APP_CONTINUE;
+}
+
+void LifeControlMode::processMouse(AppState& state) {
+	float relMouseX;
+	float relMouseY;
+	auto mouseButtons = SDL_GetRelativeMouseState(&relMouseX, &relMouseY);
+
+	if (mouseButtons & SDL_BUTTON_MMASK) {
+		state.worldWindow.xoffset += relMouseX;
+		state.worldWindow.yoffset += relMouseY;
+	}
+
+	float mouseX;
+	float mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
+
+	if (mouseButtons & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK)) {
+		auto [cellX, cellY] = state.worldWindow.lifeSPointFromScreenPoint(mouseX, mouseY);
+		bool value = bool(mouseButtons & SDL_BUTTON_LMASK);
+		state.world.frontBufferWritable().set(cellX, cellY, value);
+	}
+}
+
+void LifeControlMode::onIterate(AppState& state) {
+	processMouse(state);
+}
+
+void TextInputMode::pasteText() {
+	char* pasted = SDL_GetClipboardText();
+	char* cursor = pasted;
+
+	while (*cursor) {
+		if (inputBuffer.size() < charLimit) {
+			inputBuffer.push_back(*cursor);
+			textChanged = true;
+		} else {
+			break;
+		}
+		cursor++;
+	}
+
+	SDL_free(pasted);
+}
+
+void TextInputMode::handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
+	switch (event.key) {
+	case SDLK_ESCAPE:
+		cancelled = true;
+		state.setMode(LifeControlMode::id);
+		break;
+	case SDLK_BACKSPACE:
+		if (inputBuffer.size() > 0) {
+			inputBuffer.pop_back();
+			textChanged = true;
+		}
+		break;
+	case SDLK_RETURN:
+		enterPressed = true;
+		break;
+	case SDLK_V:
+		pasteText();
+		break;
+	default:
+		break;
+	}
+}
+
+void TextInputMode::handleTextInput(AppState& state, SDL_TextInputEvent& event) {
+	const char* ptr = event.text;
+	while (*ptr) {
+		if (inputBuffer.size() < charLimit) {
+			inputBuffer.push_back(*ptr);
+			textChanged = true;
+		}
+		ptr++;
+	}
+}
+
+SDL_AppResult TextInputMode::onEvent(AppState& state, SDL_Event *event) {
+	switch (event->type) {
+	case SDL_EVENT_KEY_DOWN:
+		handleKeyDown(state, event->key);
+		break;
+	case SDL_EVENT_TEXT_INPUT:
+		handleTextInput(state, event->text);
+		break;
+	default:
+		break;
+	}
+
+	return SDL_APP_CONTINUE;
+}
+
+void TextInputMode::resetFlags() {
+	cancelled = false;
+	enterPressed = false;
+	textChanged = false;
+}
+
+void TextInputMode::onEndFrame(AppState& state) {
+	resetFlags();
+}
+
+void TextInputMode::onSwitchIn(AppState& state) {
+	SDL_StartTextInput(state.window);
+	inputBuffer.clear();
+	resetFlags();
+}
+
+void TextInputMode::onSwitchOut(AppState& state) {
+	SDL_StopTextInput(state.window);
+}
+
+void AppState::setMode(unsigned int id) {
+	currentMode->onSwitchOut(*this);
+
+	switch (id) {
+	case LifeControlMode::id:
+		currentMode = &lifeControlMode;
+		break;
+	case TextInputMode::id:
+		currentMode = &textInputMode;
+		break;
+	default:
+		break;
+	}
+
+	currentMode->onSwitchIn(*this);
+}
 
 static AppState __state;
 
@@ -85,125 +275,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	__state.world.backBuffer().randomize();
 	__state.world.swap();
 
-	return SDL_APP_CONTINUE;
-}
-
-SDL_AppResult handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
-	switch (event.key) {
-	case SDLK_ESCAPE:
-		return SDL_APP_SUCCESS;
-	case SDLK_SPACE:
-		state.lifeState.paused = !state.lifeState.paused;
-		state.lifeState.lastTickTime = SDL_GetTicks();
-		break;
-	case SDLK_E:
-		if (state.lifeState.paused) {
-			state.world.tick();
-			state.world.swap();
-		}
-		break;
-	case SDLK_R:
-		state.world.backBuffer().randomize();
-		state.world.swap();
-		break;
-	case SDLK_C:
-		state.world.backBuffer().clear();
-		state.world.swap();
-		break;
-	case SDLK_S:
-		state.uiState.ruleStringModal = true;
-		state.uiState.ruleStringBuffer.clear();
-		state.uiState.ruleStringError.clear();
-		SDL_StartTextInput(state.window);
-		break;
-	case SDLK_UP:
-		state.lifeState.tickms -= 10;
-		if (state.lifeState.tickms < 10) state.lifeState.tickms = 10;
-		break;
-	case SDLK_DOWN:
-		state.lifeState.tickms += 10;
-		break;
-	case SDLK_F1:
-		state.uiDebug = static_cast<UiDebugMode>(
-			(state.uiDebug + 1) % UI_DEBUG_MODE_COUNT
-		);
-		break;
-	default:
-		break;
-	}
+	__state.currentMode = &__state.lifeControlMode;
 
 	return SDL_APP_CONTINUE;
-}
-
-void handleMouseWheel(AppState& state, SDL_MouseWheelEvent& event) {
-	state.worldWindow.zoom(event.mouse_x, event.mouse_y, event.y);
-}
-
-SDL_AppResult handleNonTextInput(AppState& state, SDL_Event *event) {
-	switch (event->type) {
-	case SDL_EVENT_KEY_DOWN:
-		return handleKeyDown(state, event->key);
-	case SDL_EVENT_MOUSE_WHEEL:
-		handleMouseWheel(state, event->wheel);
-		break;
-	default:
-		break;
-	}
-
-	return SDL_APP_CONTINUE;
-}
-
-void handleTextInput(AppState& state, SDL_Event *event) {
-	auto& uiState = state.uiState;
-
-	switch (event->type) {
-	case SDL_EVENT_KEY_DOWN:
-		if (event->key.key == SDLK_ESCAPE) {
-			uiState.ruleStringModal = false;
-			SDL_StopTextInput(state.window);
-		} else if (event->key.key == SDLK_BACKSPACE) {
-
-			if (uiState.ruleStringBuffer.size() > 0) {
-				uiState.ruleStringBuffer.pop_back();
-			}
-		} else if (event->key.key == SDLK_RETURN) {
-			if (state.world.rule.setString(uiState.ruleStringBuffer)) {
-				uiState.ruleStringModal = false;
-				SDL_StopTextInput(state.window);
-			} else {
-				uiState.ruleStringError = "Invalid rulestring.";
-			}
-		} else if (event->key.key == SDLK_V) {
-			char* pasted = SDL_GetClipboardText();
-			char* cursor = pasted;
-
-			while (*cursor) {
-				if (uiState.ruleStringBuffer.size() < uiState.ruleStringCharLimit) {
-					uiState.ruleStringBuffer.push_back(*cursor);
-				} else {
-					break;
-				}
-				cursor++;
-			}
-
-			SDL_free(pasted);
-		}
-		break;
-	case SDL_EVENT_TEXT_INPUT:
-		{
-			uiState.ruleStringError.clear();
-			const char* ptr = event->text.text;
-			while (*ptr) {
-				if (uiState.ruleStringBuffer.size() < uiState.ruleStringCharLimit) {
-					uiState.ruleStringBuffer.push_back(*ptr);
-				}
-				ptr++;
-			}
-		}
-		break;
-	default:
-		break;
-	}
 }
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
@@ -213,13 +287,7 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
 		return SDL_APP_SUCCESS;
 	}
 
-	if (SDL_TextInputActive(state.window)) {
-		handleTextInput(state, event);
-	} else {
-		return handleNonTextInput(state, event);
-	}
-
-	return SDL_APP_CONTINUE;
+	return state.currentMode->onEvent(state, event);
 }
 
 float rollingAverage(float currentAverage, float newValue) {
@@ -298,29 +366,7 @@ void renderUi(AppState& state) {
 
 	uiBuilder.styleStack.pop();
 
-	if (uiState.ruleStringModal) {
-		uiBuilder.beginModal();
-		uiBuilder.style.alignment = {
-			HorizontalAlignment::center,
-			VerticalAlignment::top
-		};
-		uiBuilder.resetCursor();
-
-		uiBuilder.text("Enter Rulestring");
-		uiBuilder.textBox(uiState.ruleStringBuffer, 400);
-		if (uiState.ruleStringError.size() == 0) {
-			uiBuilder.text(" ");
-		} else {
-			uiBuilder.styleStack.push({
-				.type = ui::UiStylePropertyType::TextColor,
-				.colorValue = { 255, 0, 0, 255 }
-			});
-			uiBuilder.text(uiState.ruleStringError);
-			uiBuilder.styleStack.pop();
-		}
-
-		uiBuilder.endModal();
-	}
+	state.uiState.ruleStringModal.show(state);
 
 	ui::renderDrawData(state.renderer, uiBuilder.drawData);
 
@@ -331,27 +377,6 @@ void renderUi(AppState& state) {
 			uiBuilder.drawData,
 			showElements
 		);
-	}
-}
-
-void processMouse(AppState& state) {
-	float relMouseX;
-	float relMouseY;
-	auto mouseButtons = SDL_GetRelativeMouseState(&relMouseX, &relMouseY);
-
-	if (mouseButtons & SDL_BUTTON_MMASK) {
-		state.worldWindow.xoffset += relMouseX;
-		state.worldWindow.yoffset += relMouseY;
-	}
-
-	float mouseX;
-	float mouseY;
-	SDL_GetMouseState(&mouseX, &mouseY);
-
-	if (mouseButtons & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK)) {
-		auto [cellX, cellY] = state.worldWindow.lifeSPointFromScreenPoint(mouseX, mouseY);
-		bool value = bool(mouseButtons & SDL_BUTTON_LMASK);
-		state.world.frontBufferWritable().set(cellX, cellY, value);
 	}
 }
 
@@ -366,9 +391,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 	state.averageFrameTime = rollingAverage(state.averageFrameTime, frameDelta);
 
 	// Do state updates
-	if (!SDL_TextInputActive(state.window)) {
-		processMouse(state);
-	}
+	state.currentMode->onIterate(state);
 	processLifeTick(state.world, state.lifeState, currentTime);
 
 	// Render
@@ -377,6 +400,8 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 	state.worldWindow.renderWorld(renderer, state.world);
 	renderUi(state);
 	SDL_RenderPresent(renderer);
+
+	state.currentMode->onEndFrame(state);
 
 	return SDL_APP_CONTINUE;
 }
