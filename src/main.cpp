@@ -32,11 +32,14 @@ void RuleStringModal::renderModal(ui::UiBuilder& uiBuilder, const std::string& b
 }
 
 void RuleStringModal::show(AppState& state) {
-	// Currently this modal is the only UI element that uses text
-	// input
-	if (state.currentMode->getId() != TextInputMode::id) return;
+	if (!active) return;
 
 	auto& input = state.textInputMode;
+
+	if (input.cancelled) {
+		close(state);
+		return;
+	}
 
 	if (input.textChanged) showError = false;
 
@@ -44,10 +47,10 @@ void RuleStringModal::show(AppState& state) {
 
 	if (input.enterPressed) {
 		bool success = state.world.rule.setString(input.inputBuffer);
-		if (!success) {
-			showError = true;
+		if (success) {
+			close(state);
 		} else {
-			state.setMode(LifeControlMode::id);
+			showError = true;
 		}
 	}
 }
@@ -55,6 +58,12 @@ void RuleStringModal::show(AppState& state) {
 void RuleStringModal::open(AppState& state) {
 	state.setMode(TextInputMode::id);
 	showError = false;
+	active = true;
+}
+
+void RuleStringModal::close(AppState& state) {
+	state.setMode(LifeControlMode::id);
+	active = false;
 }
 
 SDL_AppResult LifeControlMode::handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {

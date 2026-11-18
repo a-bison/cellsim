@@ -48,11 +48,13 @@ enum UiDebugMode {
 };
 
 struct RuleStringModal {
+	bool active = false;
 	bool showError = false;
 
 	void renderModal(ui::UiBuilder& uiBuilder, const std::string& buffer);
 	void show(AppState& state);
 	void open(AppState& state);
+	void close(AppState& state);
 };
 
 struct UiState {
