@@ -4,6 +4,81 @@
 #include <vector>
 
 namespace life {
+bool LifeRuleParser::hasNext() {
+	return cursor < str->size();
+}
+
+char LifeRuleParser::next() {
+	if (!hasNext()) {
+		error = true;
+		return '\0';
+	}
+
+	char c = (*str)[cursor];
+	cursor++;
+	return c;
+}
+
+bool LifeRuleParser::isDigit(char c) {
+	return c >= '0' && c <= '9';
+}
+
+unsigned int LifeRuleParser::nextDigit() {
+	char c = next();
+	if (!isDigit(c)) {
+		error = true;
+		return 0;
+	}
+
+	return static_cast<unsigned int>(c - '0');
+}
+
+void LifeRuleParser::parseDigits(std::vector<unsigned int>& v) {
+	while (true) {
+		unsigned int d = nextDigit();
+		if (error) break;
+		v.push_back(d);
+	}
+}
+
+char LifeRuleParser::previous() {
+	if (cursor == 0) {
+		error = true;
+		return '\0';
+	}
+
+	return (*str)[cursor - 1];
+}
+
+void LifeRuleParser::parse() {
+	char b = '\0';
+	char s = '\0';
+
+	b = next();
+	if (b != 'b' && b != 'B' || error) goto err;
+
+	parseDigits(born);
+
+	// only acceptable error case is if we encountered '/'
+	if (previous() != '/') goto err;
+	error = false;
+
+	s = next();
+	if (s != 's' && s != 'S' || error) goto err;
+
+	parseDigits(survive);
+
+	// only acceptable case is 
+	// !hasNext() && isDigit(previous())
+	if (hasNext() || !isDigit(previous())) goto err;
+	error = false;
+
+	return;
+err:
+	error = true;
+	return;
+}
+
 void LifeRule::setBorn(std::span<const unsigned int> _born) {
 	born = 0;
 	for (const auto& i : _born) born |= 1 << i;
@@ -15,50 +90,14 @@ void LifeRule::setSurvive(std::span<const unsigned int> _survive) {
 }
 
 bool LifeRule::setString(const std::string& ruleString) {
-	unsigned int cursor = 0;
+	LifeRuleParser parser { ruleString };
+	parser.parse();
 
-	if (ruleString.size() == 0) return false;
+	if (parser.error) return false;
 
-	if (ruleString[cursor] != 'b' && ruleString[cursor] != 'B') {
-		return false;
-	}
+	setBorn(parser.born);
+	setSurvive(parser.survive);
 
-	cursor++;
-	if (cursor >= ruleString.size()) return false;
-
-	std::vector<unsigned int> born;
-	while (ruleString[cursor] != '/') {
-		char digit = ruleString[cursor];
-		if (digit < '0' || digit > '9') return false;
-
-		born.push_back(static_cast<unsigned int>(digit - '0'));
-
-		cursor++;
-		if (cursor >= ruleString.size()) return false;
-	}
-
-	cursor++;
-	if (cursor >= ruleString.size()) return false;
-
-	if (ruleString[cursor] != 's' && ruleString[cursor] != 'S') {
-		return false;
-	}
-
-	cursor++;
-	if (cursor >= ruleString.size()) return false;
-
-	std::vector<unsigned int> survive;
-	while (cursor < ruleString.size()) {
-		char digit = ruleString[cursor];
-		if (digit < '0' || digit > '9') return false;
-
-		survive.push_back(static_cast<unsigned int>(digit - '0'));
-
-		cursor++;
-	}
-
-	setBorn(born);
-	setSurvive(survive);
 	return true;
 }
 

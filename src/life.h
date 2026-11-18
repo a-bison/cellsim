@@ -5,6 +5,7 @@
 #include <set>
 #include <span>
 #include <string>
+#include <vector>
 
 namespace life {
 using signed_size_t = std::make_signed_t<size_t>;
@@ -45,6 +46,32 @@ struct Buffer {
 
 	// Prints the grid to the console. Used for debug.
 	void dumpGrid() const;
+};
+
+struct LifeRuleParser {
+	const std::string* str;
+	unsigned int cursor = 0;
+	bool error = false;
+
+	std::vector<unsigned int> born;
+	std::vector<unsigned int> survive;
+
+	LifeRuleParser(const std::string& _str) : str { &_str } {}
+
+	bool hasNext();
+	char next();
+
+	// Peek at the last character pulled by next()
+	char previous();
+
+	static bool isDigit(char c);
+	unsigned int nextDigit();
+
+	// Parse digits until the first non-digit or end of string is
+	// encountered.
+	void parseDigits(std::vector<unsigned int>& v);
+
+	void parse();
 };
 
 struct LifeRule {
