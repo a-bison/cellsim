@@ -3,6 +3,12 @@
 #include <iostream>
 #include <vector>
 
+void appendDigitList(uint16_t ruleInt, std::string& buffer) {
+	for (char i = 0; i <= 8; i++) {
+		if (ruleInt & (1 << i)) buffer.push_back('0' + i);
+	}
+}
+
 namespace life {
 bool LifeRuleParser::hasNext() {
 	return cursor < str->size();
@@ -53,6 +59,7 @@ char LifeRuleParser::previous() {
 void LifeRuleParser::parse() {
 	char b = '\0';
 	char s = '\0';
+	char p = '\0';
 
 	b = next();
 	if (b != 'b' && b != 'B' || error) goto err;
@@ -68,9 +75,8 @@ void LifeRuleParser::parse() {
 
 	parseDigits(survive);
 
-	// only acceptable case is 
-	// !hasNext() && isDigit(previous())
-	if (hasNext() || !isDigit(previous())) goto err;
+	p = previous();
+	if (!(!hasNext() && (isDigit(p) || p == 's' || p == 'S'))) goto err;
 	error = false;
 
 	return;
@@ -112,5 +118,17 @@ bool LifeRule::eval(bool alive, unsigned int liveNeighbors) {
 	} else {
 		return bool(survive & (1 << liveNeighbors));
 	}
+}
+
+std::string LifeRule::toString() {
+	std::string out;
+
+	out.push_back('B');
+	appendDigitList(born, out);
+	out.push_back('/');
+	out.push_back('S');
+	appendDigitList(survive, out);
+
+	return out;
 }
 }

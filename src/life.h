@@ -91,6 +91,8 @@ struct LifeRule {
 	// Given previous cell state and number of live neighbors, returns whether the
 	// cell should be alive or dead next tick
 	bool eval(bool alive, unsigned int liveNeighbors);
+
+	std::string toString();
 };
 
 template<size_t W, size_t H>

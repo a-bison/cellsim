@@ -373,6 +373,14 @@ void renderUi(AppState& state) {
 		uiBuilder.text("PAUSED");
 	}
 
+	uiBuilder.style.alignment = {
+		HorizontalAlignment::left,
+		VerticalAlignment::bottom
+	};
+	uiBuilder.resetCursor();
+
+	uiBuilder.textFormat("R: {}", state.world.rule.toString());
+
 	uiBuilder.styleStack.pop();
 
 	state.uiState.ruleStringModal.show(state);
