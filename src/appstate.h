@@ -4,6 +4,7 @@
 
 #include "ui.h"
 #include "life.h"
+#include "measurement.h"
 #include "sdlutil.h"
 
 using sdlutil::HorizontalAlignment;
@@ -32,10 +33,10 @@ public:
 };
 
 struct LifeState {
-	unsigned int tickms = 100;
-	uint64_t lastTickTime = 0;
-	float averageTickTime = 0.0f;
 	bool paused = false;
+	unsigned int tickTargetTime = 100;
+	uint64_t tickTimeScore = 0;
+	measurement::FrequencyMeasurement tickMeasurement { 2000 };
 };
 
 // Deliberately using non-class enum here for more convenient cycling debug

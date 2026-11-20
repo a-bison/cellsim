@@ -72,7 +72,6 @@ SDL_AppResult LifeControlMode::handleKeyDown(AppState& state, SDL_KeyboardEvent&
 		return SDL_APP_SUCCESS;
 	case SDLK_SPACE:
 		state.lifeState.paused = !state.lifeState.paused;
-		state.lifeState.lastTickTime = SDL_GetTicks();
 		break;
 	case SDLK_E:
 		if (state.lifeState.paused) {
@@ -92,11 +91,13 @@ SDL_AppResult LifeControlMode::handleKeyDown(AppState& state, SDL_KeyboardEvent&
 		state.uiState.ruleStringModal.open(state);
 		break;
 	case SDLK_UP:
-		state.lifeState.tickms -= 10;
-		if (state.lifeState.tickms < 10) state.lifeState.tickms = 10;
+		state.lifeState.tickTargetTime -= 10;
+		if (state.lifeState.tickTargetTime < 10) {
+			state.lifeState.tickTargetTime = 10;
+		}
 		break;
 	case SDLK_DOWN:
-		state.lifeState.tickms += 10;
+		state.lifeState.tickTargetTime += 10;
 		break;
 	case SDLK_F1:
 		state.uiState.debugMode = static_cast<UiDebugMode>(
@@ -304,14 +305,20 @@ float rollingAverage(float currentAverage, float newValue) {
 }
 
 template<size_t W, size_t H>
-void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t currentTime) {
-	uint64_t deltaTime = currentTime - lifeState.lastTickTime;
+void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t deltaTime) {
+	if (lifeState.paused) return;
 
-	if (deltaTime > lifeState.tickms && !lifeState.paused) {
+	// We accumulate the time delta between each frame, and then "spend" it
+	// until there's not enough for a tick. This allows the simulation to
+	// get very close the the target tick period, and allows sub-frame time
+	// simulation speeds by running multiple ticks per frame.
+	lifeState.tickTimeScore += deltaTime;
+
+	while (lifeState.tickTimeScore > lifeState.tickTargetTime) {
+		lifeState.tickTimeScore -= lifeState.tickTargetTime;
 		world.tick();
+		lifeState.tickMeasurement.record(SDL_GetTicks());
 		world.swap();
-		lifeState.lastTickTime = currentTime;
-		lifeState.averageTickTime = rollingAverage(lifeState.averageTickTime, deltaTime);
 	}
 }
 
@@ -342,9 +349,9 @@ void renderUi(AppState& state) {
 	// TPS counter
 	uiBuilder.textFormat(
 		"{:.2f} TPS ({:.2f}/{} ms)",
-		1000.0f / state.lifeState.averageTickTime,
-		state.lifeState.averageTickTime,
-		state.lifeState.tickms
+		1000.0f * state.lifeState.tickMeasurement.calcFrequency(),
+		state.lifeState.tickMeasurement.calcPeriod(),
+		state.lifeState.tickTargetTime
 	);
 
 	uiBuilder.style.alignment = {
@@ -409,7 +416,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 	// Do state updates
 	state.currentMode->onIterate(state);
-	processLifeTick(state.world, state.lifeState, currentTime);
+	processLifeTick(state.world, state.lifeState, frameDelta);
 
 	// Render
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
