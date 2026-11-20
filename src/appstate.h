@@ -34,7 +34,7 @@ public:
 
 struct LifeState {
 	bool paused = false;
-	unsigned int tickTargetTime = 100;
+	uint64_t tickTargetTime = 100;
 	uint64_t tickTimeScore = 0;
 	measurement::FrequencyMeasurement tickMeasurement { 2000 };
 };
