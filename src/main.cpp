@@ -8,6 +8,8 @@
 
 static const std::string LIFE_STANDARD_RULE { "B3/S23" };
 
+static AppState __state;
+
 void RuleStringModal::renderModal(ui::UiBuilder& uiBuilder, const std::string& buffer) {
 	uiBuilder.beginModal();
 	uiBuilder.style.alignment = {
@@ -257,8 +259,6 @@ void AppState::setMode(unsigned int id) {
 
 	currentMode->onSwitchIn(*this);
 }
-
-static AppState __state;
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	*appstate = &__state;
