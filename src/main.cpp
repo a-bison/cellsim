@@ -91,6 +91,9 @@ SDL_AppResult LifeControlMode::handleKeyDown(AppState& state, SDL_KeyboardEvent&
 	case SDLK_S:
 		state.uiState.ruleStringModal.open(state);
 		break;
+	case SDLK_Z:
+		if (state.lifeState.paused) state.world.swap();
+		break;
 	case SDLK_UP:
 		state.lifeState.tickTargetTime -= 10;
 		if (state.lifeState.tickTargetTime < 10) {
