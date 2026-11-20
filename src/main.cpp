@@ -245,6 +245,8 @@ void TextInputMode::onSwitchOut(AppState& state) {
 }
 
 void AppState::setMode(unsigned int id) {
+	if (currentMode->getId() == id) return;
+
 	currentMode->onSwitchOut(*this);
 
 	switch (id) {
