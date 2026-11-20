@@ -103,11 +103,6 @@ SDL_AppResult LifeControlMode::handleKeyDown(AppState& state, SDL_KeyboardEvent&
 	case SDLK_DOWN:
 		state.lifeState.tickTargetTime += 10;
 		break;
-	case SDLK_F1:
-		state.uiState.debugMode = static_cast<UiDebugMode>(
-			(state.uiState.debugMode + 1) % UI_DEBUG_MODE_COUNT
-		);
-		break;
 	default:
 		break;
 	}
@@ -301,6 +296,13 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
 
 	if (event->type == SDL_EVENT_QUIT) {
 		return SDL_APP_SUCCESS;
+	}
+
+	if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F1) {
+		state.uiState.debugMode = static_cast<UiDebugMode>(
+			(state.uiState.debugMode + 1) % UI_DEBUG_MODE_COUNT
+		);
+		return SDL_APP_CONTINUE;
 	}
 
 	return state.currentMode->onEvent(state, event);
