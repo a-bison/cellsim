@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <ctime>
 
 #define SDL_MAIN_USE_CALLBACKS 1
@@ -314,11 +315,30 @@ void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t de
 	// simulation speeds by running multiple ticks per frame.
 	lifeState.tickTimeScore += deltaTime;
 
+	uint64_t timeSpentTicking = 0;
 	while (lifeState.tickTimeScore > lifeState.tickTargetTime) {
-		lifeState.tickTimeScore -= lifeState.tickTargetTime;
+		uint64_t before = SDL_GetTicks();
 		world.tick();
-		lifeState.tickMeasurement.record(SDL_GetTicks());
+		uint64_t after = SDL_GetTicks();
+		lifeState.tickMeasurement.record(after);
+		uint64_t tickRealTime = after - before;
+
 		world.swap();
+
+		timeSpentTicking += tickRealTime;
+		if (timeSpentTicking > 30) {
+			// If catching up on ticks is taking too long, bail and
+			// draw a frame
+			lifeState.tickTimeScore = 0;
+			break;
+		}
+
+		uint64_t cost = std::max(tickRealTime, lifeState.tickTargetTime);
+		if (cost < lifeState.tickTimeScore) {
+			lifeState.tickTimeScore -= cost;
+		} else {
+			lifeState.tickTimeScore = 0;
+		}
 	}
 }
 
