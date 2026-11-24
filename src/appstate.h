@@ -59,8 +59,12 @@ struct RuleStringModal {
 };
 
 struct UiState {
+	ui::UiBuilder uiBuilder;
 	RuleStringModal ruleStringModal;
 	UiDebugMode debugMode = UI_DEBUG_NONE;
+
+	void cycleDebugMode();
+	void render(AppState& state);
 };
 
 class LifeControlMode : public AppMode {
@@ -106,7 +110,6 @@ public:
 struct AppState {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
-	ui::UiBuilder uiBuilder;
 	UiState uiState;
 
 	uint64_t lastTime = 0;

@@ -15,6 +15,7 @@ set_target_properties(main PROPERTIES OUTPUT_NAME "cellsim")
 
 target_sources(main PRIVATE "src/appstate_lifecontrol.cpp")
 target_sources(main PRIVATE "src/appstate_textinput.cpp")
+target_sources(main PRIVATE "src/appstate_uistate.cpp")
 target_sources(main PRIVATE "src/life.cpp")
 target_sources(main PRIVATE "src/measurement.cpp")
 target_sources(main PRIVATE "src/sdlutil.cpp")
