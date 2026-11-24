@@ -87,10 +87,10 @@ void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t de
 	// until there's not enough for a tick. This allows the simulation to
 	// get very close the the target tick period, and allows sub-frame time
 	// simulation speeds by running multiple ticks per frame.
-	lifeState.tickTimeScore += deltaTime;
+	lifeState.tickTimeBudget += deltaTime;
 
 	uint64_t timeSpentTicking = 0;
-	while (lifeState.tickTimeScore > lifeState.tickTargetTime) {
+	while (lifeState.tickTimeBudget > lifeState.tickTargetTime) {
 		uint64_t before = SDL_GetTicks();
 		world.tick();
 		uint64_t after = SDL_GetTicks();
@@ -103,15 +103,15 @@ void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t de
 		if (timeSpentTicking > 30) {
 			// If catching up on ticks is taking too long, bail and
 			// draw a frame
-			lifeState.tickTimeScore = 0;
+			lifeState.tickTimeBudget = 0;
 			break;
 		}
 
 		uint64_t cost = std::max(tickRealTime, lifeState.tickTargetTime);
-		if (cost < lifeState.tickTimeScore) {
-			lifeState.tickTimeScore -= cost;
+		if (cost < lifeState.tickTimeBudget) {
+			lifeState.tickTimeBudget -= cost;
 		} else {
-			lifeState.tickTimeScore = 0;
+			lifeState.tickTimeBudget = 0;
 		}
 	}
 }
