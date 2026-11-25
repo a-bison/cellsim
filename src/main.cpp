@@ -54,9 +54,18 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
 		return SDL_APP_SUCCESS;
 	}
 
-	if (event->type == SDL_EVENT_KEY_DOWN && event->key.key == SDLK_F1) {
-		state.uiState.cycleDebugMode();
-		return SDL_APP_CONTINUE;
+	if (event->type == SDL_EVENT_KEY_DOWN) {
+		const auto& key = event->key.key;
+		switch(key) {
+		case SDLK_F1:
+			state.uiState.debugMode.cycle();
+			return SDL_APP_CONTINUE;
+		case SDLK_F2:
+			state.uiState.perfMode.cycle();
+			return SDL_APP_CONTINUE;
+		default:
+			break;
+		}
 	}
 
 	return state.currentMode->onEvent(state, event);

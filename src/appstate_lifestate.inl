@@ -1,5 +1,3 @@
-#include "appstate.h"
-
 template<size_t W, size_t H>
 void LifeState<W, H>::initializeWorld(const std::string& ruleString) {
 	world.rule.setString(ruleString);

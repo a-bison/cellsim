@@ -59,8 +59,44 @@ void RuleStringModal::close(AppState& state) {
 	active = false;
 }
 
-void UiState::cycleDebugMode() {
-	debugMode = static_cast<UiDebugMode>((debugMode + 1) % UI_DEBUG_MODE_COUNT);
+void UiState::renderPerfDisplay(AppState& state) {
+	if (perfMode == UI_PERF_NONE) return;
+
+	uiBuilder.style.alignment = {
+		HorizontalAlignment::left,
+		VerticalAlignment::top
+	};
+	uiBuilder.resetCursor();
+
+	if (perfMode == UI_PERF_BASIC) {
+		uiBuilder.textFormat(
+			"{:.2f} FPS",
+			1000.0f * state.frameTracker.calcFrequency()
+		);
+
+		uiBuilder.textFormat(
+			"{:.2f} TPS (TARGET: {:.2f})",
+			1000.0f * state.lifeState.tickTracker.calcFrequency(),
+			1000.0f / state.lifeState.tickTargetTime
+		);
+	}
+
+	if (perfMode == UI_PERF_ALL) {
+		uiBuilder.textFormat(
+			"{:.2f} FPS (P{:.2f}:R{:.2f} ms)",
+			1000.0f * state.frameTracker.calcFrequency(),
+			state.frameTracker.calcPeriod(),
+			state.frameTracker.calcAverageTime()
+		);
+
+		uiBuilder.textFormat(
+			"{:.2f} TPS (P{:.2f}:T{}:R{:.2f} ms)",
+			1000.0f * state.lifeState.tickTracker.calcFrequency(),
+			state.lifeState.tickTracker.calcPeriod(),
+			state.lifeState.tickTargetTime,
+			state.lifeState.tickTracker.calcAverageTime()
+		);
+	}
 }
 
 void UiState::render(AppState& state) {
@@ -71,28 +107,7 @@ void UiState::render(AppState& state) {
 		.colorValue = { 0, 0, 0, 130 }
 	});
 
-	uiBuilder.style.alignment = {
-		HorizontalAlignment::left,
-		VerticalAlignment::top
-	};
-	uiBuilder.resetCursor();
-
-	// FPS counter
-	uiBuilder.textFormat(
-		"{:.2f} FPS (P{:.2f}:R{:.2f} ms)",
-		1000.0f * state.frameTracker.calcFrequency(),
-		state.frameTracker.calcPeriod(),
-		state.frameTracker.calcAverageTime()
-	);
-
-	// TPS counter
-	uiBuilder.textFormat(
-		"{:.2f} TPS (P{:.2f}:T{}:R{:.2f} ms)",
-		1000.0f * state.lifeState.tickTracker.calcFrequency(),
-		state.lifeState.tickTracker.calcPeriod(),
-		state.lifeState.tickTargetTime,
-		state.lifeState.tickTracker.calcAverageTime()
-	);
+	renderPerfDisplay(state);
 
 	uiBuilder.style.alignment = {
 		HorizontalAlignment::right,

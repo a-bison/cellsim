@@ -21,6 +21,19 @@ constexpr uint64_t TPS_MEASUREMENT_PERIOD_MS = 2000;
 
 struct AppState;
 
+template<typename T> inline constexpr T ENUM_COUNT {};
+#define DECLARE_ENUM_COUNT(T, C) template<> inline constexpr T ENUM_COUNT<T> = C;
+
+template<typename T>
+T cycleEnum(const T& e);
+
+template<typename T>
+struct CyclableEnum {
+	T e;
+	void cycle();
+	operator T&();
+};
+
 class AppMode {
 public:
 	virtual SDL_AppResult onEvent(AppState& state, SDL_Event *event) {
@@ -57,6 +70,17 @@ enum UiDebugMode {
 	UI_DEBUG_MODE_COUNT
 };
 
+DECLARE_ENUM_COUNT(UiDebugMode, UI_DEBUG_MODE_COUNT);
+
+enum UiPerfMode {
+	UI_PERF_NONE = 0,
+	UI_PERF_BASIC,
+	UI_PERF_ALL,
+	UI_PERF_MODE_COUNT
+};
+
+DECLARE_ENUM_COUNT(UiPerfMode, UI_PERF_MODE_COUNT);
+
 struct RuleStringModal {
 	bool active = false;
 	bool showError = false;
@@ -70,9 +94,10 @@ struct RuleStringModal {
 struct UiState {
 	ui::UiBuilder uiBuilder;
 	RuleStringModal ruleStringModal;
-	UiDebugMode debugMode = UI_DEBUG_NONE;
+	CyclableEnum<UiDebugMode> debugMode { UI_DEBUG_NONE };
+	CyclableEnum<UiPerfMode> perfMode { UI_PERF_BASIC };
 
-	void cycleDebugMode();
+	void renderPerfDisplay(AppState& state);
 	void render(AppState& state);
 };
 
@@ -134,4 +159,5 @@ struct AppState {
 	void setMode(unsigned int id);
 };
 
+#include "appstate.inl"
 #include "appstate_lifestate.inl"
