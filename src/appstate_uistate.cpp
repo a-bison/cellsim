@@ -39,7 +39,7 @@ void RuleStringModal::show(AppState& state) {
 	renderModal(state.uiState.uiBuilder, state.textInputMode.inputBuffer);
 
 	if (input.enterPressed) {
-		bool success = state.world.rule.setString(input.inputBuffer);
+		bool success = state.lifeState.world.rule.setString(input.inputBuffer);
 		if (success) {
 			close(state);
 		} else {
@@ -125,7 +125,7 @@ void UiState::render(AppState& state) {
 	};
 	uiBuilder.resetCursor();
 
-	uiBuilder.textFormat("R: {}", state.world.rule.toString());
+	uiBuilder.textFormat("R: {}", state.lifeState.world.rule.toString());
 
 	uiBuilder.styleStack.pop();
 

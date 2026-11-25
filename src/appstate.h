@@ -32,11 +32,17 @@ public:
 	virtual ~AppMode() = default;
 };
 
+template<size_t W, size_t H>
 struct LifeState {
 	bool paused = false;
 	uint64_t tickTargetTime = 100;
 	uint64_t tickTimeBudget = 0;
 	measurement::TimeTracker tickTracker { 2000 };
+
+	life::World<W, H> world;
+
+	void initializeWorld(const std::string& ruleString);
+	void processTick(uint64_t deltaTime);
 };
 
 // Deliberately using non-class enum here for more convenient cycling debug
@@ -110,14 +116,13 @@ public:
 struct AppState {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
-	UiState uiState;
 
 	uint64_t lastTime = 0;
 	float averageFrameTime = 0.0f;
 
-	life::World<WORLD_WIDTH, WORLD_HEIGHT> world;
+	UiState uiState;
+	LifeState<WORLD_WIDTH, WORLD_HEIGHT> lifeState;
 	ui::WorldWindow worldWindow;
-	LifeState lifeState;
 
 	LifeControlMode lifeControlMode;
 	TextInputMode textInputMode;
@@ -126,3 +131,5 @@ struct AppState {
 
 	void setMode(unsigned int id);
 };
+
+#include "appstate_lifestate.inl"

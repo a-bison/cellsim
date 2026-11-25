@@ -1,40 +1,43 @@
 #include "appstate.h"
 
 SDL_AppResult LifeControlMode::handleKeyDown(AppState& state, SDL_KeyboardEvent& event) {
+	auto& lifeState = state.lifeState;
+	auto& world = lifeState.world;
+
 	switch (event.key) {
 	case SDLK_ESCAPE:
 		return SDL_APP_SUCCESS;
 	case SDLK_SPACE:
-		state.lifeState.paused = !state.lifeState.paused;
+		lifeState.paused = !lifeState.paused;
 		break;
 	case SDLK_E:
-		if (state.lifeState.paused) {
-			state.world.tick();
-			state.world.swap();
+		if (lifeState.paused) {
+			world.tick();
+			world.swap();
 		}
 		break;
 	case SDLK_R:
-		state.world.backBuffer().randomize();
-		state.world.swap();
+		world.backBuffer().randomize();
+		world.swap();
 		break;
 	case SDLK_C:
-		state.world.backBuffer().clear();
-		state.world.swap();
+		world.backBuffer().clear();
+		world.swap();
 		break;
 	case SDLK_S:
 		state.uiState.ruleStringModal.open(state);
 		break;
 	case SDLK_Z:
-		if (state.lifeState.paused) state.world.swap();
+		if (lifeState.paused) world.swap();
 		break;
 	case SDLK_UP:
-		state.lifeState.tickTargetTime -= 10;
-		if (state.lifeState.tickTargetTime < 10) {
-			state.lifeState.tickTargetTime = 10;
+		lifeState.tickTargetTime -= 10;
+		if (lifeState.tickTargetTime < 10) {
+			lifeState.tickTargetTime = 10;
 		}
 		break;
 	case SDLK_DOWN:
-		state.lifeState.tickTargetTime += 10;
+		lifeState.tickTargetTime += 10;
 		break;
 	default:
 		break;
@@ -78,7 +81,7 @@ void LifeControlMode::processMouse(AppState& state) {
 	if (mouseButtons & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK)) {
 		auto [cellX, cellY] = state.worldWindow.lifeSPointFromScreenPoint(mouseX, mouseY);
 		bool value = bool(mouseButtons & SDL_BUTTON_LMASK);
-		state.world.frontBufferWritable().set(cellX, cellY, value);
+		state.lifeState.world.frontBufferWritable().set(cellX, cellY, value);
 	}
 }
 

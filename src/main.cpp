@@ -32,8 +32,6 @@ void AppState::setMode(unsigned int id) {
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	*appstate = &__state;
 
-	std::srand(std::time(0));
-
 	bool windowCreateSuccess = SDL_CreateWindowAndRenderer(
 		"cellsim",
 		WINDOW_WIDTH, WINDOW_HEIGHT,
@@ -46,15 +44,12 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 		return SDL_APP_FAILURE;
 	}
 
-	__state.worldWindow.setCellSize(CELLSIZE);
-
 	SDL_SetRenderVSync(__state.renderer, 1);
 
-	__state.world.rule.setString(LIFE_STANDARD_RULE);
-
-	__state.world.backBuffer().randomize();
-	__state.world.swap();
-
+	// Init non-SDL state
+	std::srand(std::time(0));
+	__state.worldWindow.setCellSize(CELLSIZE);
+	__state.lifeState.initializeWorld(LIFE_STANDARD_RULE);
 	__state.currentMode = &__state.lifeControlMode;
 
 	return SDL_APP_CONTINUE;
@@ -79,41 +74,6 @@ float rollingAverage(float currentAverage, float newValue) {
 	return 0.95*currentAverage + 0.05*newValue;
 }
 
-template<size_t W, size_t H>
-void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t deltaTime) {
-	if (lifeState.paused) return;
-
-	// We accumulate the time delta between each frame, and then "spend" it
-	// until there's not enough for a tick. This allows the simulation to
-	// get very close the the target tick period, and allows sub-frame time
-	// simulation speeds by running multiple ticks per frame.
-	lifeState.tickTimeBudget += deltaTime;
-
-	uint64_t timeSpentTicking = 0;
-	while (lifeState.tickTimeBudget > lifeState.tickTargetTime) {
-		lifeState.tickTracker.start();
-		world.tick();
-		lifeState.tickTracker.end();
-		uint64_t tickRealTime = lifeState.tickTracker.lastMeasurement().delta();
-
-		world.swap();
-
-		timeSpentTicking += tickRealTime;
-		if (timeSpentTicking > 30) {
-			// If catching up on ticks is taking too long, bail and
-			// draw a frame
-			lifeState.tickTimeBudget = 0;
-			break;
-		}
-
-		uint64_t cost = std::max(tickRealTime, lifeState.tickTargetTime);
-		if (cost < lifeState.tickTimeBudget) {
-			lifeState.tickTimeBudget -= cost;
-		} else {
-			lifeState.tickTimeBudget = 0;
-		}
-	}
-}
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
 	auto& state = *reinterpret_cast<AppState*>(appstate);
@@ -127,12 +87,12 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 	// Do state updates
 	state.currentMode->onIterate(state);
-	processLifeTick(state.world, state.lifeState, frameDelta);
+	state.lifeState.processTick(frameDelta);
 
 	// Render
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_RenderClear(renderer);
-	state.worldWindow.renderWorld(renderer, state.world);
+	state.worldWindow.renderWorld(renderer, state.lifeState.world);
 	state.uiState.render(state);
 	SDL_RenderPresent(renderer);
 
