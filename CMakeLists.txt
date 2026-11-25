@@ -13,6 +13,7 @@ target_link_options(compiler-options INTERFACE -static -static-libgcc -static-li
 add_executable(main "src/main.cpp")
 set_target_properties(main PROPERTIES OUTPUT_NAME "cellsim")
 
+target_sources(main PRIVATE "src/appstate.cpp")
 target_sources(main PRIVATE "src/appstate_lifecontrol.cpp")
 target_sources(main PRIVATE "src/appstate_textinput.cpp")
 target_sources(main PRIVATE "src/appstate_uistate.cpp")

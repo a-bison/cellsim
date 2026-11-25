@@ -10,25 +10,6 @@ static const std::string LIFE_STANDARD_RULE { "B3/S23" };
 
 static AppState __state;
 
-void AppState::setMode(unsigned int id) {
-	if (currentMode->getId() == id) return;
-
-	currentMode->onSwitchOut(*this);
-
-	switch (id) {
-	case LifeControlMode::id:
-		currentMode = &lifeControlMode;
-		break;
-	case TextInputMode::id:
-		currentMode = &textInputMode;
-		break;
-	default:
-		break;
-	}
-
-	currentMode->onSwitchIn(*this);
-}
-
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	*appstate = &__state;
 
@@ -73,7 +54,6 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
 float rollingAverage(float currentAverage, float newValue) {
 	return 0.95*currentAverage + 0.05*newValue;
 }
-
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
 	auto& state = *reinterpret_cast<AppState*>(appstate);
