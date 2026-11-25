@@ -33,6 +33,8 @@ void TimeTracker::end() {
 }
 
 float TimeTracker::calcAverageTime() {
+	if (measurements.size() == 0) return 0;
+
 	clean();
 	uint64_t sum = 0;
 
