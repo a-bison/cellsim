@@ -10,6 +10,15 @@ static const std::string LIFE_STANDARD_RULE { "B3/S23" };
 
 static AppState __state;
 
+void printSdlInfo(SDL_Renderer* renderer) {
+	auto* rendererName = SDL_GetRendererName(renderer);
+	if (!renderer) {
+		SDL_Log("Could not get renderer name: %s", SDL_GetError());
+	} else {
+		SDL_Log("Renderer name: %s", rendererName);
+	}
+}
+
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 	*appstate = &__state;
 
@@ -24,6 +33,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[]) {
 		SDL_Log("Couldn't create window and renderer: %s", SDL_GetError());
 		return SDL_APP_FAILURE;
 	}
+
+	printSdlInfo(__state.renderer);
 
 	SDL_SetRenderVSync(__state.renderer, 1);
 
