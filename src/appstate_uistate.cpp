@@ -86,10 +86,11 @@ void UiState::render(AppState& state) {
 
 	// TPS counter
 	uiBuilder.textFormat(
-		"{:.2f} TPS ({:.2f}/{} ms)",
-		1000.0f * state.lifeState.tickMeasurement.calcFrequency(),
-		state.lifeState.tickMeasurement.calcPeriod(),
-		state.lifeState.tickTargetTime
+		"{:.2f} TPS (P{:.2f}:T{}:R{:.2f} ms)",
+		1000.0f * state.lifeState.tickTracker.calcFrequency(),
+		state.lifeState.tickTracker.calcPeriod(),
+		state.lifeState.tickTargetTime,
+		state.lifeState.tickTracker.calcAverageTime()
 	);
 
 	uiBuilder.style.alignment = {

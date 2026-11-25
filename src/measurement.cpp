@@ -4,30 +4,57 @@
 #include <limits>
 
 namespace measurement {
-void FrequencyMeasurement::clean() {
-	if (timestamps.size() == 0) return;
+uint64_t TimeMeasurement::delta() const {
+	return end - start;
+}
+
+void TimeTracker::clean() {
+	if (measurements.size() == 0) return;
 
 	uint64_t timestamp = SDL_GetTicks();
 	uint64_t deltaTime = std::numeric_limits<uint64_t>::max();
-	while ((deltaTime = timestamp - timestamps.back()) > measurementPeriod) {
-		timestamps.pop_back();
-		if (timestamps.size() == 0) break;
+	while ((deltaTime = timestamp - measurements.back().end) > measurementPeriod) {
+		measurements.pop_back();
+		if (measurements.size() == 0) break;
 	}
 }
 
-void FrequencyMeasurement::record(uint64_t timestamp) {
-	timestamps.push_front(timestamp);
+void TimeTracker::start() {
+	measuring = true;
+	currentMeasurement.start = SDL_GetTicks();
+	currentMeasurement.end = 0;
+}
+
+void TimeTracker::end() {
+	currentMeasurement.end = SDL_GetTicks();
+	measurements.push_front(currentMeasurement);
+	measuring = false;
 	clean();
 }
 
-float FrequencyMeasurement::calcFrequency() {
+float TimeTracker::calcAverageTime() {
 	clean();
-	return timestamps.size() / static_cast<float>(measurementPeriod);
+	uint64_t sum = 0;
+
+	for (const auto& measurement : measurements) {
+		sum += measurement.delta();
+	}
+
+	return static_cast<float>(sum) / measurements.size();
 }
 
-float FrequencyMeasurement::calcPeriod() {
-	if (timestamps.size() == 0) return 0;
+float TimeTracker::calcFrequency() {
 	clean();
-	return static_cast<float>(measurementPeriod) / timestamps.size();
+	return measurements.size() / static_cast<float>(measurementPeriod);
+}
+
+float TimeTracker::calcPeriod() {
+	if (measurements.size() == 0) return 0;
+	clean();
+	return static_cast<float>(measurementPeriod) / measurements.size();
+}
+
+const TimeMeasurement& TimeTracker::lastMeasurement() const {
+	return measurements.front();
 }
 };

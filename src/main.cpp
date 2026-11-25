@@ -91,11 +91,10 @@ void processLifeTick(life::World<W, H>& world, LifeState& lifeState, uint64_t de
 
 	uint64_t timeSpentTicking = 0;
 	while (lifeState.tickTimeBudget > lifeState.tickTargetTime) {
-		uint64_t before = SDL_GetTicks();
+		lifeState.tickTracker.start();
 		world.tick();
-		uint64_t after = SDL_GetTicks();
-		lifeState.tickMeasurement.record(after);
-		uint64_t tickRealTime = after - before;
+		lifeState.tickTracker.end();
+		uint64_t tickRealTime = lifeState.tickTracker.lastMeasurement().delta();
 
 		world.swap();
 

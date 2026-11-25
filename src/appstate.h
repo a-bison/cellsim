@@ -36,7 +36,7 @@ struct LifeState {
 	bool paused = false;
 	uint64_t tickTargetTime = 100;
 	uint64_t tickTimeBudget = 0;
-	measurement::FrequencyMeasurement tickMeasurement { 2000 };
+	measurement::TimeTracker tickTracker { 2000 };
 };
 
 // Deliberately using non-class enum here for more convenient cycling debug
