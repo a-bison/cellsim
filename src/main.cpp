@@ -51,19 +51,16 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event *event) {
 	return state.currentMode->onEvent(state, event);
 }
 
-float rollingAverage(float currentAverage, float newValue) {
-	return 0.95*currentAverage + 0.05*newValue;
-}
-
 SDL_AppResult SDL_AppIterate(void* appstate) {
 	auto& state = *reinterpret_cast<AppState*>(appstate);
 	auto* renderer = state.renderer;
 
 	// Time stuff
-	uint64_t currentTime = SDL_GetTicks();
-	uint64_t frameDelta = currentTime - state.lastTime;
-	state.lastTime = currentTime;
-	state.averageFrameTime = rollingAverage(state.averageFrameTime, frameDelta);
+	state.frameTracker.start();
+	uint64_t frameDelta = (
+		state.frameTracker.currentMeasurement.start -
+		state.frameTracker.lastMeasurement().start
+	);
 
 	// Do state updates
 	state.currentMode->onIterate(state);
@@ -74,6 +71,12 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 	SDL_RenderClear(renderer);
 	state.worldWindow.renderWorld(renderer, state.lifeState.world);
 	state.uiState.render(state);
+
+	// End frame timer before presenting, since SDL_RenderPresent blocks
+	// when waiting for vsync, but we want to accurately measure the real
+	// time a frame takes.
+	state.frameTracker.end();
+
 	SDL_RenderPresent(renderer);
 
 	state.currentMode->onEndFrame(state);

@@ -79,9 +79,10 @@ void UiState::render(AppState& state) {
 
 	// FPS counter
 	uiBuilder.textFormat(
-		"{:.2f} FPS ({:.2f} ms)",
-		1000.0f / state.averageFrameTime,
-		state.averageFrameTime
+		"{:.2f} FPS (P{:.2f}:R{:.2f} ms)",
+		1000.0f * state.frameTracker.calcFrequency(),
+		state.frameTracker.calcPeriod(),
+		state.frameTracker.calcAverageTime()
 	);
 
 	// TPS counter

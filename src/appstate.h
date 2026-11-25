@@ -16,6 +16,9 @@ constexpr size_t WORLD_WIDTH = 400;
 constexpr size_t WORLD_HEIGHT = WORLD_WIDTH;
 constexpr float CELLSIZE = WINDOW_WIDTH / WORLD_WIDTH;
 
+constexpr uint64_t FPS_MEASUREMENT_PERIOD_MS = 2000;
+constexpr uint64_t TPS_MEASUREMENT_PERIOD_MS = 2000;
+
 struct AppState;
 
 class AppMode {
@@ -37,7 +40,7 @@ struct LifeState {
 	bool paused = false;
 	uint64_t tickTargetTime = 100;
 	uint64_t tickTimeBudget = 0;
-	measurement::TimeTracker tickTracker { 2000 };
+	measurement::TimeTracker tickTracker { TPS_MEASUREMENT_PERIOD_MS };
 
 	life::World<W, H> world;
 
@@ -117,8 +120,7 @@ struct AppState {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
 
-	uint64_t lastTime = 0;
-	float averageFrameTime = 0.0f;
+	measurement::TimeTracker frameTracker { FPS_MEASUREMENT_PERIOD_MS };
 
 	UiState uiState;
 	LifeState<WORLD_WIDTH, WORLD_HEIGHT> lifeState;
