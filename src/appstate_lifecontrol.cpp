@@ -69,7 +69,13 @@ void LifeControlMode::processMouse(AppState& state) {
 	float relMouseY;
 	auto mouseButtons = SDL_GetRelativeMouseState(&relMouseX, &relMouseY);
 
-	if (mouseButtons & SDL_BUTTON_MMASK) {
+	auto keyMods = SDL_GetModState();
+	bool shouldPan = (
+		static_cast<bool>(mouseButtons & SDL_BUTTON_MMASK) ||
+		static_cast<bool>(keyMods & SDL_KMOD_ALT) 
+	);
+
+	if (shouldPan) {
 		state.worldWindow.xoffset += relMouseX;
 		state.worldWindow.yoffset += relMouseY;
 	}

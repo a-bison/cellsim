@@ -1,5 +1,6 @@
 #pragma once
 
+#include <format>
 #include <vector>
 #include <SDL3/SDL.h>
 

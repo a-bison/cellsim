@@ -8,7 +8,9 @@ add_library(compiler-options INTERFACE)
 target_compile_features(compiler-options INTERFACE cxx_std_23)
 target_compile_options(compiler-options INTERFACE "-Og")
 
-target_link_options(compiler-options INTERFACE -static -static-libgcc -static-libstdc++)
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+    target_link_options(compiler-options INTERFACE -static -static-libgcc -static-libstdc++)
+endif()
 
 add_executable(main "src/main.cpp")
 set_target_properties(main PROPERTIES OUTPUT_NAME "cellsim")
