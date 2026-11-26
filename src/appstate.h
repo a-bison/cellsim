@@ -58,7 +58,7 @@ struct LifeState {
 	life::World<W, H> world;
 
 	void initializeWorld(const std::string& ruleString);
-	void processTick(uint64_t deltaTime);
+	void update(uint64_t deltaTime);
 };
 
 // Deliberately using non-class enum here for more convenient cycling debug

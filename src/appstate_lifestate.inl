@@ -6,7 +6,7 @@ void LifeState<W, H>::initializeWorld(const std::string& ruleString) {
 }
 
 template<size_t W, size_t H>
-void LifeState<W, H>::processTick(uint64_t deltaTime) {
+void LifeState<W, H>::update(uint64_t deltaTime) {
 	if (paused) return;
 
 	// We accumulate the time delta between each frame, and then "spend" it

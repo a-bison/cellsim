@@ -84,7 +84,7 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 	// Do state updates
 	state.currentMode->onIterate(state);
-	state.lifeState.processTick(frameDelta);
+	state.lifeState.update(frameDelta);
 
 	// Render
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
