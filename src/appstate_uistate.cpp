@@ -66,7 +66,7 @@ void RuleStringModal::close(AppState& state) {
 
 void UiState::openLifeFileDialog(AppState& state) {
 	if (openLifeFileContext.opened) return;
-	sdlutil::openFileDialog(openLifeFileContext, state.window, LIFE_FILE_FILTERS);
+	sdlutil::showOpenFileDialog(openLifeFileContext, state.window, LIFE_FILE_FILTERS);
 }
 
 bool UiState::handleFileLoad(AppState& state) {
