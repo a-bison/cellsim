@@ -1,10 +1,27 @@
 #pragma once
 
+#include <span>
 #include <string>
 #include <vector>
 #include <SDL3/SDL.h>
 
 namespace sdlutil {
+struct FileDialogContext {
+	bool opened = false;
+	bool done = false;
+	std::vector<std::string> fileList;
+	int filter = 0;
+
+	FileDialogContext();
+	void reset();
+};
+
+void showOpenFileDialog(
+	FileDialogContext& context,
+	SDL_Window* window,
+	std::span<const SDL_DialogFileFilter> filters
+);
+
 void renderVerticalLine(SDL_Renderer* renderer, float x, float h);
 void renderHorizonalLine(SDL_Renderer* renderer, float y, float w);
 void renderGridLines(SDL_Renderer* renderer, float xoffset, float yoffset, float cellSize);

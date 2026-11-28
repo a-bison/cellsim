@@ -30,6 +30,9 @@ SDL_AppResult LifeControlMode::handleKeyDown(AppState& state, SDL_KeyboardEvent&
 	case SDLK_Z:
 		if (lifeState.paused) world.swap();
 		break;
+	case SDLK_L:
+		state.uiState.openLifeFileDialog(state);
+		break;
 	case SDLK_UP:
 		lifeState.tickTargetTime -= 10;
 		if (lifeState.tickTargetTime < 10) {

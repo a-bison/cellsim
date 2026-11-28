@@ -1,5 +1,10 @@
 #include "appstate.h"
 
+static const SDL_DialogFileFilter LIFE_FILE_FILTERS[] {
+	{ "Plaintext", "cells" },
+	{ "All files", "*" }
+};
+
 void RuleStringModal::renderModal(ui::UiBuilder& uiBuilder, const std::string& buffer) {
 	uiBuilder.beginModal();
 	uiBuilder.style.alignment = {
@@ -57,6 +62,37 @@ void RuleStringModal::open(AppState& state) {
 void RuleStringModal::close(AppState& state) {
 	state.setMode(LifeControlMode::id);
 	active = false;
+}
+
+void UiState::openLifeFileDialog(AppState& state) {
+	if (openLifeFileContext.opened) return;
+	sdlutil::openFileDialog(openLifeFileContext, state.window, LIFE_FILE_FILTERS);
+}
+
+bool UiState::handleFileLoad(AppState& state) {
+	bool loaded = false;
+	auto& world = state.lifeState.world;
+	life::ResultType<life::CellFile> cellFile;
+
+	if (!openLifeFileContext.done) goto done;
+	if (openLifeFileContext.fileList.size() == 0) goto done;
+
+	cellFile = life::loadFile(openLifeFileContext.fileList[0]);
+	if (cellFile.error) {
+		SDL_Log("Failed to load selected cell file");
+		goto done;
+	}
+
+	world.backBuffer().clear();
+	world.backBuffer().setFromFile(cellFile);
+	world.swap();
+
+	state.lifeState.tickTimeBudget = 0;
+
+	loaded = true;
+done:
+	openLifeFileContext.reset();
+	return loaded;
 }
 
 void UiState::renderPerfDisplay(AppState& state) {

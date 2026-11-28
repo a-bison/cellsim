@@ -20,6 +20,15 @@ struct SPoint {
 	signed_size_t y;
 };
 
+struct CellFile {
+	std::string name;
+	std::vector<Point> points;
+	Point size { 0, 0 };
+
+	void addCell(const Point& pt);
+	void dump() const;
+};
+
 template<size_t W, size_t H>
 struct Buffer {
 	std::array<bool, W*H> __data;
@@ -41,6 +50,7 @@ struct Buffer {
 	unsigned int countLiveNeighbors(Point pt) const;
 
 	void massSet(signed_size_t x, signed_size_t y, std::span<const Point> offsets, bool val);
+	void setFromFile(const CellFile& file);
 
 	void randomize();
 
@@ -116,6 +126,21 @@ struct World {
 	// Swaps the backbuffer and frontbuffer.
 	void swap();
 };
+
+template<typename T>
+struct ResultType {
+	static ResultType<T> badResult();
+
+	T value;
+	bool error = false;
+
+	operator T&() { return value; }
+};
+
+bool isPlaintextComment(const std::string& s);
+
+ResultType<CellFile> loadPlaintextFile(const std::string& filename);
+ResultType<CellFile> loadFile(const std::string& filename);
 }
 
 #include "life.inl"

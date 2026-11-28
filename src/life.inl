@@ -69,6 +69,15 @@ void Buffer<W, H>::massSet(signed_size_t x, signed_size_t y, std::span<const Poi
 }
 
 template<size_t W, size_t H>
+void Buffer<W, H>::setFromFile(const CellFile& file) {
+	Point offset {
+		(W - file.size.x) / 2,
+		(H - file.size.y) / 2
+	};
+	massSet(offset.x, offset.y, file.points, true);
+}
+
+template<size_t W, size_t H>
 void Buffer<W, H>::randomize() {
 	for (auto& cell : __data) {
 		cell = static_cast<bool>(std::rand() % 2);
@@ -119,5 +128,12 @@ void World<W, H>::tick() {
 			back.set(x, y, nextState);
 		}
 	}
+}
+
+template<typename T>
+ResultType<T> ResultType<T>::badResult() {
+	ResultType<T> bad;
+	bad.error = true;
+	return bad;
 }
 }

@@ -1,5 +1,6 @@
 #include "life.h"
 
+#include <fstream>
 #include <iostream>
 #include <vector>
 
@@ -9,7 +10,26 @@ void appendDigitList(uint16_t ruleInt, std::string& buffer) {
 	}
 }
 
+std::string stripFirstChar(const std::string& s) {
+	return s.substr(1, s.size()-1);
+}
+
 namespace life {
+void CellFile::addCell(const Point& pt) {
+	if (pt.x >= size.x) size.x = pt.x+1;
+	if (pt.y >= size.y) size.y = pt.y+1;
+
+	points.push_back(pt);
+}
+
+void CellFile::dump() const {
+	std::cout << "CellFile: " << name << std::endl;
+
+	for (const auto& p : points) {
+		std::cout << '(' << p.x << ',' << p.y << ')' << std::endl;
+	}
+}
+
 bool LifeRuleParser::hasNext() {
 	return cursor < str->size();
 }
@@ -130,5 +150,65 @@ std::string LifeRule::toString() {
 	appendDigitList(survive, out);
 
 	return out;
+}
+
+bool isPlaintextComment(const std::string& s) {
+	if (s.size() == 0) return false;
+	if (s[0] != '!') return false;
+
+	return true;
+}
+
+ResultType<CellFile> loadPlaintextFile(const std::string& filename) {
+	ResultType<CellFile> result;
+	result.error = true;
+
+	std::ifstream file { filename };
+	std::string line {};
+
+	std::getline(file, line);
+	if (!isPlaintextComment(line)) return result;
+
+	result.value.name = stripFirstChar(line);
+
+	while(std::getline(file, line)) {
+		if (!isPlaintextComment(line)) break;
+	}
+
+	if (!file) return result;
+
+	Point p { 0, 0 };
+	do {
+		if (line.size() == 0) continue;
+		if (line.back() == '\r') line.pop_back();
+
+		while (p.x < line.size()) {
+			if (line[p.x] == 'O') {
+				result.value.addCell(p);
+				p.x++;
+			} else if (line[p.x] == '.') {
+				p.x++;
+			} else {
+				return result;
+			}
+		}
+
+		p.x = 0;
+		p.y++;
+	} while(std::getline(file, line));
+
+	std::cout << "Loaded .cells: " << result.value.name << std::endl;
+
+	result.error = false;
+	return result;
+}
+
+ResultType<CellFile> loadFile(const std::string& filename) {
+	// Currently only one supported filetype, more planned.
+	if (filename.ends_with(".cells")) {
+		return loadPlaintextFile(filename);
+	}
+
+	return ResultType<CellFile>::badResult();
 }
 }

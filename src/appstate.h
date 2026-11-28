@@ -94,9 +94,12 @@ struct RuleStringModal {
 struct UiState {
 	ui::UiBuilder uiBuilder;
 	RuleStringModal ruleStringModal;
+	sdlutil::FileDialogContext openLifeFileContext;
 	CyclableEnum<UiDebugMode> debugMode { UI_DEBUG_NONE };
 	CyclableEnum<UiPerfMode> perfMode { UI_PERF_BASIC };
 
+	void openLifeFileDialog(AppState& state);
+	bool handleFileLoad(AppState& state);
 	void renderPerfDisplay(AppState& state);
 	void render(AppState& state);
 };

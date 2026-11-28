@@ -5,7 +5,72 @@
 
 static std::unordered_map<void*, sdlutil::RenderPropertyStack> __propStacks;
 
+void SDLCALL fileDialogCallback(
+	void* context_v,
+	const char* const* fileListRaw,
+	int filter
+) {
+	auto& context = *(reinterpret_cast<sdlutil::FileDialogContext*>(context_v));
+
+	std::vector<std::string> fileList;
+
+	if (!fileListRaw) {
+		SDL_Log("Error opening file: %s", SDL_GetError());
+		context.done = true;
+		return;
+	}
+
+	std::string file;
+	while (*fileListRaw) {
+		file.assign(*fileListRaw);
+		context.fileList.push_back(std::move(file));
+		fileListRaw++;
+	}
+
+	context.filter = filter;
+	context.done = true;
+
+	SDL_Log("File dialog complete. filter=%d", filter);
+	if (context.fileList.size() == 0) {
+		SDL_Log("No files chosen.");
+	} else {
+		SDL_Log("Files:");
+		for (const auto& file : context.fileList) {
+			SDL_Log(file.c_str());
+		}
+	}
+}
+
 namespace sdlutil {
+FileDialogContext::FileDialogContext() {
+	reset();
+}
+
+void FileDialogContext::reset() {
+	opened = false;
+	done = false;
+	fileList.clear();
+	filter = 0;
+}
+
+void showOpenFileDialog(
+	FileDialogContext& context,
+	SDL_Window* window,
+	std::span<const SDL_DialogFileFilter> filters
+) {
+	context.reset();
+	SDL_ShowOpenFileDialog(
+		&fileDialogCallback,
+		&context,
+		window,
+		filters.data(),
+		filters.size(),
+		nullptr, // default location
+		false
+	);
+	context.opened = true;
+}
+
 void renderVerticalLine(SDL_Renderer* renderer, float x, float h) {
 	SDL_RenderLine(renderer, x, 0.0f, x, h);
 }

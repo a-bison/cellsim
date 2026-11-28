@@ -84,7 +84,9 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
 	// Do state updates
 	state.currentMode->onIterate(state);
-	state.lifeState.update(frameDelta);
+	// Note: Don't do ticks on the same frame a file was loaded.
+	bool loaded = state.uiState.handleFileLoad(state);
+	if (!loaded) state.lifeState.update(frameDelta);
 
 	// Render
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
